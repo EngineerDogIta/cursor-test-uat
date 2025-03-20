@@ -6,3 +6,67 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
+# File di compilazione Java
+*.class
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# File di log
+*.log
+logs/
+
+# File di configurazione IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# File di ambiente e configurazione
+.env
+application-*.yml
+application-*.properties
+!application.yml
+!application.properties
+
+# Directory node/npm se usi frontend
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+
+# File di build frontend
+/dist/
+/build/
+
+# File temporanei
+*.tmp
+*.swp
+*~
+
+# File di Lombok
+lombok.config
+
+# File di test coverage
+/coverage/
+
+# File di cache
+.gradle/
+.sass-cache/
+.npm/
+
+# Altri file specifici del progetto
+*.pid
+*.port
