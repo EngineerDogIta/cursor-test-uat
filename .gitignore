@@ -22,6 +22,7 @@ Thumbs.db
 *.tar.gz
 *.rar
 
-# File di log
+# File di log e database
 *.log
 logs/
+data/
