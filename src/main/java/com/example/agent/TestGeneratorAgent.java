@@ -35,7 +35,6 @@ public class TestGeneratorAgent {
                     "id": "SCENARIO_ID",
                     "title": "Titolo dello scenario",
                     "type": "POSITIVE/NEGATIVE/BOUNDARY",
-                    "priority": "HIGH/MEDIUM/LOW",
                     "preconditions": ["precondizione1", "precondizione2"],
                     "steps": [
                         {

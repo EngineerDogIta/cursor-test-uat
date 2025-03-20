@@ -40,7 +40,6 @@
                             <span th:if="${job.completedAt != null}" th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}"></span>
                             <span th:unless="${job.completedAt != null}">-</span>
                         </p>
-                        <p><strong>Priorità:</strong> <span th:text="${job.priority}"></span></p>
                     </div>
                 </div>
             </div>
