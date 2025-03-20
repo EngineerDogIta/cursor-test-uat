@@ -16,17 +16,25 @@ CREATE TABLE generated_test (
     updated_at TIMESTAMP
 );
 
-CREATE TABLE generation_job (
+CREATE TABLE test_generation_jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid TEXT NOT NULL UNIQUE,
-    status TEXT NOT NULL,
-    timestamp TIMESTAMP NOT NULL,
-    ticket_content_id INTEGER,
-    generated_test_id INTEGER,
+    jira_ticket TEXT NOT NULL,
+    description TEXT NOT NULL,
+    components TEXT,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED')),
+    error_message TEXT,
+    branch_name TEXT,
     created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP,
-    FOREIGN KEY (ticket_content_id) REFERENCES ticket_content(id),
-    FOREIGN KEY (generated_test_id) REFERENCES generated_test(id)
+    completed_at TIMESTAMP
+);
+
+CREATE TABLE job_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    FOREIGN KEY (job_id) REFERENCES test_generation_jobs(id)
 );
 
 CREATE TABLE operation_log (
@@ -40,6 +48,6 @@ CREATE TABLE operation_log (
 
 CREATE INDEX idx_ticket_content_uid ON ticket_content(uid);
 CREATE INDEX idx_generated_test_uid ON generated_test(uid);
-CREATE INDEX idx_generation_job_uid ON generation_job(uid);
 CREATE INDEX idx_operation_log_uid ON operation_log(uid);
-CREATE INDEX idx_operation_log_job_uid ON operation_log(job_uid); 
+CREATE INDEX idx_operation_log_job_uid ON operation_log(job_uid);
+CREATE INDEX idx_job_logs_job_id ON job_logs(job_id); 
