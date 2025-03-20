@@ -1,22 +1,29 @@
 package com.example.dto;
 
-public class TicketContentDto {
-    private String content;
-    private String ticketId;
-    private String project;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import java.util.List;
 
-    // Costruttore vuoto
+public class TicketContentDto {
+    
+    @NotBlank(message = "Il contenuto del ticket non può essere vuoto")
+    private String content;
+    
+    @NotBlank(message = "L'ID del ticket non può essere vuoto")
+    private String ticketId;
+    
+    @NotEmpty(message = "La lista dei componenti non può essere vuota")
+    private List<String> components;
+
     public TicketContentDto() {
     }
 
-    // Costruttore con parametri
-    public TicketContentDto(String content, String ticketId, String project) {
+    public TicketContentDto(String content, String ticketId, List<String> components) {
         this.content = content;
         this.ticketId = ticketId;
-        this.project = project;
+        this.components = components;
     }
 
-    // Getter e Setter
     public String getContent() {
         return content;
     }
@@ -33,11 +40,11 @@ public class TicketContentDto {
         this.ticketId = ticketId;
     }
 
-    public String getProject() {
-        return project;
+    public List<String> getComponents() {
+        return components;
     }
 
-    public void setProject(String project) {
-        this.project = project;
+    public void setComponents(List<String> components) {
+        this.components = components;
     }
 } 

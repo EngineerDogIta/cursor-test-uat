@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Nuovo Ticket - Test Generation System</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Nuovo Ticket</h2>
+                <p class="text-muted">Inserisci i dettagli del ticket Jira per la generazione dei test</p>
+            </div>
+            <div class="col text-end">
+                <a th:href="@{/}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="@{/ticket/submit}" method="post" th:object="${ticketRequest}">
+                    <div class="mb-3">
+                        <label for="jiraTicket" class="form-label">Ticket Jira</label>
+                        <input type="text" class="form-control" id="jiraTicket" th:field="*{jiraTicket}" required>
+                        <div class="form-text">Inserisci l'ID del ticket Jira (es. PROJ-123)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descrizione</label>
+                        <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
+                        <div class="form-text">Inserisci una descrizione opzionale del ticket</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="components" class="form-label">Componenti</label>
+                        <input type="text" class="form-control" id="components" th:field="*{components}" 
+                               placeholder="Inserisci i componenti separati da spazi (es. frontend backend database)">
+                        <div class="form-text">Inserisci i componenti coinvolti nel ticket, separati da spazi. Usa underscore per parole multiple (es. user_management)</div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Invia Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

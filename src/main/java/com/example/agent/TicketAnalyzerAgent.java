@@ -37,16 +37,16 @@ public class TicketAnalyzerAgent {
     }
 
     public String analyzeTicket(TicketContentDto ticketDto) {
-        logger.info("Starting ticket analysis for ticket: {} in project: {}", ticketDto.getTicketId(), ticketDto.getProject());
+        logger.info("Starting ticket analysis for ticket: {} with components: {}", ticketDto.getTicketId(), String.join(", ", ticketDto.getComponents()));
         logger.debug("Analyzing ticket content: {}", ticketDto.getContent());
         
         try {
             // Prima analisi base
             String ticketContext = String.format("""
                 Ticket ID: %s
-                Project: %s
+                Components: %s
                 Content: %s
-                """, ticketDto.getTicketId(), ticketDto.getProject(), ticketDto.getContent());
+                """, ticketDto.getTicketId(), String.join(", ", ticketDto.getComponents()), ticketDto.getContent());
                 
             Prompt basePrompt = new Prompt(SYSTEM_PROMPT + "\n\nTicket da analizzare:\n" + ticketContext);
             String baseAnalysis = chatClient.call(basePrompt).getResult().getOutput().getContent();
@@ -58,11 +58,11 @@ public class TicketAnalyzerAgent {
             String combinedAnalysis = String.format("""
                 {
                     "ticketId": "%s",
-                    "project": "%s",
+                    "components": ["%s"],
                     "baseAnalysis": %s,
                     "detailedAnalysis": %s
                 }
-                """, ticketDto.getTicketId(), ticketDto.getProject(), baseAnalysis, detailedAnalysis);
+                """, ticketDto.getTicketId(), String.join("\", \"", ticketDto.getComponents()), baseAnalysis, detailedAnalysis);
             
             logger.info("Ticket analysis completed successfully");
             logger.debug("Combined analysis result: {}", combinedAnalysis);
@@ -88,7 +88,7 @@ public class TicketAnalyzerAgent {
                 5. Considerazioni sulla sicurezza
                 
                 Ticket ID: %s
-                Project: %s
+                Components: %s
                 Content: %s
                 
                 Fornisci l'output in formato JSON con la seguente struttura:
@@ -100,7 +100,7 @@ public class TicketAnalyzerAgent {
                     "securityConsiderations": ["consideration1", "consideration2"],
                     "detailedAnalysis": "descrizione dettagliata"
                 }
-                """.formatted(ticketDto.getTicketId(), ticketDto.getProject(), ticketDto.getContent());
+                """.formatted(ticketDto.getTicketId(), String.join(", ", ticketDto.getComponents()), ticketDto.getContent());
             
             Prompt prompt = new Prompt(analysisPrompt);
             String analysis = chatClient.call(prompt).getResult().getOutput().getContent();

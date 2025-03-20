@@ -30,11 +30,9 @@ class TestGenerationControllerTest {
     @Test
     void startTestGeneration_ShouldReturnJobId() {
         // Arrange
-        TicketContentDto ticketDto = new TicketContentDto(
-            "Test ticket content",
-            "TICKET-123",
-            "TestProject"
-        );
+        TicketContentDto ticketDto = new TicketContentDto();
+        ticketDto.setContent("Test ticket content");
+        ticketDto.setTicketId("TEST-123");
 
         // Act
         var response = controller.startTestGeneration(ticketDto);
@@ -66,6 +64,54 @@ class TestGenerationControllerTest {
         // Assert
         assertNotNull(response.getBody());
         assertEquals(expectedStatus, response.getBody());
+        verify(testGenerationService).getJobStatus(jobId);
+    }
+
+    @Test
+    void startTestGeneration_WithEmptyContent_ShouldReturnBadRequest() {
+        // Arrange
+        TicketContentDto ticketDto = new TicketContentDto();
+        ticketDto.setTicketId("TEST-123");
+
+        // Act
+        var response = controller.startTestGeneration(ticketDto);
+
+        // Assert
+        assertEquals(400, response.getStatusCodeValue());
+        assertTrue(response.getBody().containsKey("error"));
+        assertEquals("Il contenuto del ticket non può essere vuoto", response.getBody().get("error"));
+        verify(testGenerationService, never()).startTestGeneration(anyString(), any());
+    }
+
+    @Test
+    void startTestGeneration_WithEmptyTicketId_ShouldReturnBadRequest() {
+        // Arrange
+        TicketContentDto ticketDto = new TicketContentDto();
+        ticketDto.setContent("Test ticket content");
+
+        // Act
+        var response = controller.startTestGeneration(ticketDto);
+
+        // Assert
+        assertEquals(400, response.getStatusCodeValue());
+        assertTrue(response.getBody().containsKey("error"));
+        assertEquals("L'ID del ticket non può essere vuoto", response.getBody().get("error"));
+        verify(testGenerationService, never()).startTestGeneration(anyString(), any());
+    }
+
+    @Test
+    void getTestGenerationStatus_WithInvalidJobId_ShouldReturnNotFound() {
+        // Arrange
+        String jobId = "invalid-job-id";
+        when(testGenerationService.getJobStatus(jobId)).thenReturn(null);
+
+        // Act
+        var response = controller.getTestGenerationStatus(jobId);
+
+        // Assert
+        assertEquals(404, response.getStatusCodeValue());
+        assertTrue(response.getBody().containsKey("error"));
+        assertEquals("Job non trovato", response.getBody().get("error"));
         verify(testGenerationService).getJobStatus(jobId);
     }
 } 

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Dettaglio Job - Test Generation System</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Dettaglio Job</h2>
+                <p class="text-muted">Informazioni dettagliate sul job di test generation</p>
+            </div>
+            <div class="col text-end">
+                <a th:href="@{/}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Informazioni Generali</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>ID Job:</strong> <span th:text="${job.id}"></span></p>
+                        <p><strong>Ticket Jira:</strong> <span th:text="${job.jiraTicket}"></span></p>
+                        <p><strong>Stato:</strong> 
+                            <span th:class="${job.status == 'IN_PROGRESS' ? 'badge bg-warning' : 
+                                            job.status == 'COMPLETED' ? 'badge bg-success' : 
+                                            'badge bg-danger'}"
+                                  th:text="${job.status}"></span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Data Creazione:</strong> <span th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}"></span></p>
+                        <p><strong>Data Completamento:</strong> 
+                            <span th:if="${job.completedAt != null}" th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                            <span th:unless="${job.completedAt != null}">-</span>
+                        </p>
+                        <p><strong>Priorità:</strong> <span th:text="${job.priority}"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Log di Esecuzione</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Livello</th>
+                                <th>Messaggio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="log : ${job.logs}">
+                                <td th:text="${#temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                                <td>
+                                    <span th:class="${log.level == 'INFO' ? 'badge bg-info' : 
+                                                    log.level == 'WARNING' ? 'badge bg-warning' : 
+                                                    'badge bg-danger'}"
+                                          th:text="${log.level}"></span>
+                                </td>
+                                <td th:text="${log.message}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Risultati</h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${job.status == 'COMPLETED'}" class="alert alert-success">
+                    <h6>Test Generati con Successo</h6>
+                    <p>I test sono stati generati e salvati nel repository. Puoi trovarli nel branch: <strong th:text="${job.branchName}"></strong></p>
+                </div>
+                <div th:if="${job.status == 'FAILED'}" class="alert alert-danger">
+                    <h6>Errore nella Generazione dei Test</h6>
+                    <p th:text="${job.errorMessage}"></p>
+                </div>
+                <div th:if="${job.status == 'IN_PROGRESS'}" class="alert alert-info">
+                    <h6>Job in Corso</h6>
+                    <p>Il job è attualmente in elaborazione. La pagina si aggiornerà automaticamente.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block layout:fragment="extra-js">
+        <script th:if="${job.status == 'IN_PROGRESS'}">
+            // Aggiorna automaticamente la pagina ogni 30 secondi se il job è in corso
+            setTimeout(function() {
+                window.location.reload();
+            }, 30000);
+        </script>
+    </th:block>
+</body>
+</html> 
