@@ -58,4 +58,9 @@
         <appender-ref ref="Console" />
         <appender-ref ref="JsonFile" />
     </logger>
+
+    <!-- Disabilita il logger SQL di Hibernate -->
+    <logger name="org.hibernate.SQL" level="OFF" additivity="false"/>
+    <logger name="org.hibernate.type.descriptor.sql" level="OFF" additivity="false"/>
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="OFF" additivity="false"/>
 </configuration> 

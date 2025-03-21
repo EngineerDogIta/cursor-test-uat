@@ -47,6 +47,8 @@ public class TestGenerationService {
     @Async("taskExecutor")
     public void startTestGeneration(TicketContentDto ticketDto) {
         try {
+            addJobLog(null, "INFO", "Inizio processo di generazione test per il ticket: " + ticketDto.getTicketId());
+            
             // Crea e salva il job
             TestGenerationJob job = new TestGenerationJob();
             job.setJiraTicket(ticketDto.getTicketId());
@@ -55,24 +57,33 @@ public class TestGenerationService {
             job.setStatus(TestGenerationJob.JobStatus.PENDING);
             job.setCreatedAt(LocalDateTime.now());
             testGenerationRepository.saveAndFlush(job);
+            
+            addJobLog(job, "INFO", "Job creato con ID: " + job.getId());
+            addJobLog(job, "INFO", "Componenti coinvolti: " + job.getComponents());
 
             processTestGeneration(job.getId(), ticketDto, job.getId());
         } catch (Exception e) {
             logger.error("Error starting test generation with ticketDto {}", ticketDto, e);
+            addJobLog(null, "ERROR", "Errore nell'avvio del processo: " + e.getMessage());
         }
     }
 
     @Async
     protected void processTestGeneration(Long jobId, TicketContentDto ticketDto, Long jobUid) {
         try {
+            TestGenerationJob job = testGenerationRepository.findById(jobUid).orElseThrow();
+            
             // 1. Analizza il ticket
-            logger.debug("Starting ticket analysis for jobId: {}", jobId);
+            addJobLog(job, "INFO", "Inizio analisi del ticket");
+            addJobLog(job, "DEBUG", "Contenuto del ticket: " + ticketDto.getContent());
             String ticketAnalysis = ticketAnalyzer.analyzeTicket(ticketDto);
+            addJobLog(job, "INFO", "Analisi del ticket completata");
+            addJobLog(job, "DEBUG", "Risultato analisi: " + ticketAnalysis);
             
             // Aggiorna lo stato del job
-            TestGenerationJob job = testGenerationRepository.findById(jobUid).orElseThrow();
             job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
             testGenerationRepository.save(job);
+            addJobLog(job, "INFO", "Stato del job aggiornato a IN_PROGRESS");
             
             // 2. Genera e valida i test
             String generatedTests = null;
@@ -85,19 +96,22 @@ public class TestGenerationService {
                 attempts++;
                 addJobLog(job, "INFO", "Tentativo " + attempts + " di " + MAX_ATTEMPTS);
                 
+                addJobLog(job, "INFO", "Inizio generazione dei test");
                 generatedTests = testGenerator.generateTests(ticketAnalysis);
                 addJobLog(job, "INFO", "Generazione dei test completata");
+                addJobLog(job, "DEBUG", "Test generati: " + generatedTests);
                 
                 // 3. Validazione dei test
                 addJobLog(job, "INFO", "Inizio validazione dei test");
                 validationResults = testValidator.validateTests(ticketAnalysis, generatedTests);
                 addJobLog(job, "INFO", "Validazione dei test completata");
+                addJobLog(job, "DEBUG", "Risultati validazione: " + validationResults);
                 
                 testsValidated = validationResults.contains("\"overallQuality\":\"HIGH\"") || 
                                 validationResults.contains("\"overallQuality\":\"MEDIUM\"");
                 
                 if (!testsValidated && attempts < MAX_ATTEMPTS) {
-                    addJobLog(job, "INFO", "La qualità dei test non è sufficiente, nuovo tentativo...");
+                    addJobLog(job, "WARN", "La qualità dei test non è sufficiente, nuovo tentativo...");
                 }
             }
             
@@ -106,7 +120,9 @@ public class TestGenerationService {
                 addJobLog(job, "INFO", "Test validati con successo");
                 completeJob(job.getId());
             } else {
-                throw new RuntimeException("La qualità dei test generati non è sufficiente dopo " + MAX_ATTEMPTS + " tentativi");
+                String errorMsg = "La qualità dei test generati non è sufficiente dopo " + MAX_ATTEMPTS + " tentativi";
+                addJobLog(job, "ERROR", errorMsg);
+                throw new RuntimeException(errorMsg);
             }
             
         } catch (Exception e) {
@@ -118,6 +134,7 @@ public class TestGenerationService {
             job.setErrorMessage(e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
             testGenerationRepository.save(job);
+            addJobLog(job, "ERROR", "Errore durante il processo: " + e.getMessage());
         }
     }
 
@@ -252,9 +269,11 @@ public class TestGenerationService {
 
     private void completeJob(Long jobId) {
         TestGenerationJob job = getJob(jobId);
+        addJobLog(job, "INFO", "Completamento del job");
         job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
         job.setCompletedAt(LocalDateTime.now());
         testGenerationRepository.save(job);
+        addJobLog(job, "INFO", "Job completato con successo");
     }
 
     @Transactional
