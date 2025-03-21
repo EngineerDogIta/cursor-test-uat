@@ -93,7 +93,7 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">Genearted Test UAT</h5>
+                        <h5 class="card-title mb-0">Generated Test UAT</h5>
                     </div>
                     <div class="card-body">
                         <!-- Risultati dei test -->
@@ -122,11 +122,11 @@
 </div>
 
 <th:block layout:fragment="extra-js">
-    <script th:if="${job.status == 'IN_PROGRESS'}">
-        // Aggiorna automaticamente la pagina ogni 30 secondi se il job è in corso
+    <script th:if="${job.status != 'FAILED' and job.status != 'COMPLETED'}">
+        // Aggiorna automaticamente la pagina ogni 5 secondi se il job non è fallito o completato
         setTimeout(function() {
             window.location.reload();
-        }, 30000);
+        }, 5000);
     </script>
     <script>
         // Configura marked per il rendering del markdown
