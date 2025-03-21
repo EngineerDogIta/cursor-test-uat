@@ -153,42 +153,7 @@ public class TestGenerationService {
                 addJobLog(job, "INFO", "Quality history: " + String.join(" → ", qualityHistory));
                 
                 // Crea il risultato finale
-                String finalResult = """
-                    # UAT Tests for %s
-                    
-                    ## General Information
-                    * **Ticket ID**: %s
-                    * **Generation Date**: %s
-                    * **Validation**: %s
-                    * **Attempts**: %d
-                    
-                    ## Ticket Analysis
-                    %s
-                    
-                    ## Generated UAT Tests
-                    %s
-                    
-                    ## Validation Report
-                    %s
-                    
-                    ## Attempt History
-                    %s
-                    
-                    ## Implementation Notes
-                    * These tests were automatically generated and should be reviewed by a QA.
-                    * If in doubt, refer to the original ticket documentation.
-                    * Report any issues or suggestions to: qa-feedback@example.com
-                    """.formatted(
-                        job.getJiraTicket(),
-                        job.getJiraTicket(),
-                        LocalDateTime.now().toString(),
-                        qualityHistory.isEmpty() ? "N/A" : qualityHistory.get(qualityHistory.size() - 1),
-                        attempts,
-                        ticketAnalysis,
-                        generatedTests,
-                        validationResults,
-                        generateAttemptHistory(qualityHistory)
-                    );
+                String finalResult = generatedTests;
                 
                 // Salva il risultato nel job e completa
                 job.setTestResult(finalResult);
@@ -492,22 +457,5 @@ public class TestGenerationService {
         } else {
             return "UNKNOWN";
         }
-    }
-    
-    /**
-     * Generates a summary of attempt history
-     */
-    private String generateAttemptHistory(List<String> qualityHistory) {
-        StringBuilder history = new StringBuilder();
-        history.append("Attempts required: ").append(qualityHistory.size()).append("\n\n");
-        
-        for (int i = 0; i < qualityHistory.size(); i++) {
-            history.append("- Attempt ").append(i + 1).append(": ")
-                  .append(qualityHistory.get(i))
-                  .append(i == qualityHistory.size() - 1 ? " ✓" : " ✗")
-                  .append("\n");
-        }
-        
-        return history.toString();
     }
 } 

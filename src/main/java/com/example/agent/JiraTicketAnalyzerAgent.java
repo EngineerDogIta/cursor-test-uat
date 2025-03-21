@@ -13,35 +13,43 @@ public class JiraTicketAnalyzerAgent {
     private static final Logger logger = LoggerFactory.getLogger(JiraTicketAnalyzerAgent.class);
     private final ChatClient chatClient;
     private static final String SYSTEM_PROMPT = """
-        Analizza in modo dettagliato un ticket Jira per la generazione di test UAT.
+        You are a Jira ticket analyzer specialized in UAT test generation.
         
-        Fornisci:
-        1. Una sintesi chiara e concisa del ticket
-        2. La classificazione del ticket (CR o bugfix)
-        3. Valutazione della completezza delle informazioni
-        4. I componenti coinvolti
-        5. Gli impatti tecnici
-        6. Una breve valutazione tecnica
+        Your task is to analyze the provided Jira ticket and provide a structured analysis following this format:
         
-        Formato:
+        # Ticket Analysis [ID]
         
-        # Analisi Ticket [ID]
+        ## Summary
+        Provide a clear, concise summary of the ticket's purpose and main requirements.
         
-        ## Sintesi
-        [sintesi breve e chiara del ticket]
+        ## Classification
+        Type: [CR/BUGFIX]
+        Completeness: [HIGH/MEDIUM/LOW]
+        Priority: [HIGH/MEDIUM/LOW]
         
-        ## Classificazione
-        Tipo: [CR/BUGFIX]
-        Completezza: [ALTA/MEDIA/BASSA]
+        ## Components
+        List all affected components and their roles:
+        * [Component 1]: [Role/Purpose]
+        * [Component 2]: [Role/Purpose]
         
-        ## Componenti
-        * [elenco componenti chiave]
+        ## Technical Impacts
+        Describe the technical implications:
+        * [Impact 1]: [Description]
+        * [Impact 2]: [Description]
         
-        ## Impatti
-        * [elenco impatti chiave]
+        ## Technical Analysis
+        Provide a brief technical evaluation including:
+        * Architecture considerations
+        * Potential risks
+        * Dependencies
+        * Performance implications
         
-        ## Analisi Tecnica
-        [breve valutazione tecnica]
+        ## Test Considerations
+        Highlight key aspects to consider for UAT testing:
+        * Critical functionalities
+        * Edge cases
+        * Integration points
+        * Performance requirements
         """;
 
     @Autowired
@@ -50,31 +58,43 @@ public class JiraTicketAnalyzerAgent {
     }
     
     public String analyzeTicket(TicketContentDto ticketDto) {
-        logger.info("Analisi del ticket Jira: {}", ticketDto.getTicketId());
+        logger.info("Iniziando analisi del ticket Jira: {}", ticketDto.getTicketId());
+        logger.debug("Dettagli del ticket - ID: {}, Componenti: {}, Lunghezza contenuto: {} caratteri", 
+            ticketDto.getTicketId(), 
+            String.join(", ", ticketDto.getComponents()),
+            ticketDto.getContent().length());
         
         try {
             String userPrompt = """
-                Analizza questo ticket Jira in modo dettagliato.
+                Analyze this Jira ticket in detail.
                 
-                ID Ticket: %s
-                Componenti: %s
-                Contenuto: %s
+                Ticket ID: %s
+                Components: %s
+                Content: %s
                 """.formatted(
                     ticketDto.getTicketId(),
                     String.join(", ", ticketDto.getComponents()),
                     ticketDto.getContent()
                 );
             
-            Prompt prompt = new Prompt(userPrompt);
+            logger.debug("Prompt generato per l'analisi: {}", userPrompt);
+            Prompt prompt = new Prompt(SYSTEM_PROMPT + "\n\n" + userPrompt);
+            
+            logger.debug("Inviando richiesta al modello di analisi...");
             String analysis = chatClient.call(prompt).getResult().getOutput().getContent();
             
             logger.info("Analisi completata per il ticket: {}", ticketDto.getTicketId());
-            logger.debug("Risultato analisi: {}", analysis);
+            logger.debug("Risultato dell'analisi - Lunghezza: {} caratteri, Prima riga: {}", 
+                analysis.length(),
+                analysis.split("\n")[0]);
             
             return analysis;
             
         } catch (Exception e) {
-            logger.error("Errore durante l'analisi del ticket Jira", e);
+            logger.error("Errore durante l'analisi del ticket Jira: {} - {}", 
+                ticketDto.getTicketId(), 
+                e.getMessage(), 
+                e);
             throw new RuntimeException("Impossibile analizzare il ticket Jira: " + e.getMessage(), e);
         }
     }

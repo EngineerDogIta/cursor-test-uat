@@ -46,7 +46,8 @@ public class TicketAnalyzerAgent {
     }
 
     public String analyzeTicket(TicketContentDto ticketDto) {
-        logger.info("Starting ticket analysis for ticket: {} with components: {}", ticketDto.getTicketId(), String.join(", ", ticketDto.getComponents()));
+        logger.info("Starting ticket analysis for ticket: {} with components: {}", ticketDto.getTicketId(), 
+            ticketDto.getComponents() != null ? String.join(", ", ticketDto.getComponents()) : "none");
         logger.debug("Analyzing ticket content: {}", ticketDto.getContent());
         
         try {
@@ -65,15 +66,15 @@ public class TicketAnalyzerAgent {
             
             // Combiniamo i risultati
             String combinedAnalysis = String.format("""
-                # Analisi Completa Ticket %s
+                # Complete Ticket Analysis %s
                 
-                ## Componenti
+                ## Components
                 %s
                 
-                ## Analisi Base
+                ## Base Analysis
                 %s
                 
-                ## Analisi Dettagliata
+                ## Detailed Analysis
                 %s
                 """, 
                 ticketDto.getTicketId(), 
