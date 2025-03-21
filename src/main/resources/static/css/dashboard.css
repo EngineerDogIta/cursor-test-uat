@@ -2,6 +2,10 @@
     padding: 0.5em 1em;
     border-radius: 4px;
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: 0.9rem;
 }
 
 .status-badge.bg-warning {
@@ -27,4 +31,74 @@
 .status-badge.bg-info {
     background-color: #17a2b8 !important;
     color: #fff !important;
+}
+
+/* Stili per le icone di stato */
+.status-icon {
+    font-size: 1em;
+}
+
+/* Stili per l'ordinamento delle colonne */
+th.sortable {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+th.sortable:after {
+    content: "↕";
+    opacity: 0.4;
+    margin-left: 5px;
+    font-size: 0.8em;
+}
+
+th.sortable.asc:after {
+    content: "↑";
+    opacity: 1;
+}
+
+th.sortable.desc:after {
+    content: "↓";
+    opacity: 1;
+}
+
+/* Stile per la modalità compatta */
+.table-compact tr td,
+.table-compact tr th {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+.table-compact .btn-sm {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+}
+
+/* View toggle buttons */
+.view-toggle {
+    margin-bottom: 10px;
+}
+
+.view-toggle .btn {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Stile per il tooltip di ordinamento */
+.column-tooltip {
+    display: none;
+    position: absolute;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    white-space: nowrap;
+}
+
+th.sortable:hover .column-tooltip {
+    display: block;
 } 

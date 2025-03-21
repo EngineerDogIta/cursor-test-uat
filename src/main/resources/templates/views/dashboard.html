@@ -15,9 +15,16 @@
                 <p class="text-muted">Monitor the status of your test generation jobs</p>
             </div>
             <div class="col text-end">
-                <a th:href="@{/ticket-form}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> New Ticket
-                </a>
+                <div class="d-flex justify-content-end align-items-center">
+                    <div class="view-toggle me-3">
+                        <button id="toggle-view" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-list-ul"></i> Compact View
+                        </button>
+                    </div>
+                    <a th:href="@{/ticket-form}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> New Ticket
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -30,29 +37,35 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover" id="active-jobs-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Jira Ticket</th>
-                                        <th>Status</th>
-                                        <th>Creation Date</th>
+                                        <th class="sortable" data-column="id">ID<span class="column-tooltip">Click to sort</span></th>
+                                        <th class="sortable" data-column="jiraTicket">Jira Ticket<span class="column-tooltip">Click to sort</span></th>
+                                        <th class="sortable" data-column="status">Status<span class="column-tooltip">Click to sort</span></th>
+                                        <th class="sortable" data-column="createdAt">Creation Date<span class="column-tooltip">Click to sort</span></th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr th:each="job : ${activeJobs}">
-                                        <td th:text="${job.id}"></td>
-                                        <td th:text="${job.jiraTicket}"></td>
-                                        <td>
+                                        <td th:text="${job.id}" th:data-value="${job.id}"></td>
+                                        <td th:text="${job.jiraTicket}" th:data-value="${job.jiraTicket}"></td>
+                                        <td th:data-value="${job.status}">
                                             <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
-                                                   'badge bg-info text-white status-badge'}"
-                                              th:text="${job.status}"></span>
+                                                   'badge bg-info text-white status-badge'}">
+                                                <i th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'bi bi-arrow-repeat status-icon spin' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'bi bi-check-circle status-icon' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'bi bi-x-circle status-icon' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'bi bi-hourglass status-icon' :
+                                                   'bi bi-question-circle status-icon'}"></i>
+                                                <span th:text="${job.status}"></span>
+                                            </span>
                                         </td>
-                                        <td th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                        <td th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}" th:data-value="${job.createdAt}"></td>
                                         <td>
                                             <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
                                                 <i class="bi bi-eye"></i> Details
@@ -74,29 +87,35 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover" id="completed-jobs-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Jira Ticket</th>
-                                        <th>Status</th>
-                                        <th>Completion Date</th>
+                                        <th class="sortable" data-column="id">ID<span class="column-tooltip">Click to sort</span></th>
+                                        <th class="sortable" data-column="jiraTicket">Jira Ticket<span class="column-tooltip">Click to sort</span></th>
+                                        <th class="sortable" data-column="status">Status<span class="column-tooltip">Click to sort</span></th>
+                                        <th class="sortable" data-column="completedAt">Completion Date<span class="column-tooltip">Click to sort</span></th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr th:each="job : ${completedJobs}">
-                                        <td th:text="${job.id}"></td>
-                                        <td th:text="${job.jiraTicket}"></td>
-                                        <td>
+                                        <td th:text="${job.id}" th:data-value="${job.id}"></td>
+                                        <td th:text="${job.jiraTicket}" th:data-value="${job.jiraTicket}"></td>
+                                        <td th:data-value="${job.status}">
                                             <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
-                                                   'badge bg-info text-white status-badge'}"
-                                              th:text="${job.status}"></span>
+                                                   'badge bg-info text-white status-badge'}">
+                                                <i th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'bi bi-arrow-repeat status-icon spin' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'bi bi-check-circle status-icon' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'bi bi-x-circle status-icon' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'bi bi-hourglass status-icon' :
+                                                   'bi bi-question-circle status-icon'}"></i>
+                                                <span th:text="${job.status}"></span>
+                                            </span>
                                         </td>
-                                        <td th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                        <td th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}" th:data-value="${job.completedAt}"></td>
                                         <td>
                                             <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
                                                 <i class="bi bi-eye"></i> Details
@@ -111,5 +130,117 @@
             </div>
         </div>
     </div>
+
+    <th:block layout:fragment="extra-js">
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Implementazione dell'ordinamento delle colonne
+                const sortableColumns = document.querySelectorAll('th.sortable');
+                
+                sortableColumns.forEach(column => {
+                    column.addEventListener('click', function() {
+                        const tableId = this.closest('table').id;
+                        const tableRows = document.querySelectorAll(`#${tableId} tbody tr`);
+                        const columnName = this.dataset.column;
+                        const isAsc = this.classList.contains('asc');
+                        
+                        // Rimuovi classi di ordinamento esistenti
+                        document.querySelectorAll(`#${tableId} th.sortable`).forEach(el => {
+                            el.classList.remove('asc', 'desc');
+                        });
+                        
+                        // Aggiungi classe di ordinamento attuale
+                        this.classList.add(isAsc ? 'desc' : 'asc');
+                        
+                        // Converti le righe in array per ordinamento
+                        const rowsArray = Array.from(tableRows);
+                        
+                        // Ordinamento
+                        rowsArray.sort((a, b) => {
+                            const aValue = a.querySelector(`td[data-value="${columnName}"]`) 
+                                ? a.querySelector(`td[data-value="${columnName}"]`).dataset.value 
+                                : a.children[Array.from(this.parentNode.children).indexOf(this)].textContent.trim();
+                                
+                            const bValue = b.querySelector(`td[data-value="${columnName}"]`) 
+                                ? b.querySelector(`td[data-value="${columnName}"]`).dataset.value 
+                                : b.children[Array.from(this.parentNode.children).indexOf(this)].textContent.trim();
+                                
+                            // Determinare il tipo di dati
+                            if (!isNaN(aValue) && !isNaN(bValue)) {
+                                return isAsc ? bValue - aValue : aValue - bValue;
+                            } else {
+                                return isAsc ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+                            }
+                        });
+                        
+                        // Riattacca le righe nella tabella
+                        const tbody = document.querySelector(`#${tableId} tbody`);
+                        rowsArray.forEach(row => tbody.appendChild(row));
+                        
+                        // Salva lo stato di ordinamento
+                        localStorage.setItem(`${tableId}-sort-column`, columnName);
+                        localStorage.setItem(`${tableId}-sort-direction`, isAsc ? 'desc' : 'asc');
+                    });
+                });
+                
+                // Ripristina lo stato di ordinamento al caricamento
+                ['active-jobs-table', 'completed-jobs-table'].forEach(tableId => {
+                    const savedColumn = localStorage.getItem(`${tableId}-sort-column`);
+                    const savedDirection = localStorage.getItem(`${tableId}-sort-direction`);
+                    
+                    if (savedColumn && savedDirection) {
+                        const columnHeader = document.querySelector(`#${tableId} th[data-column="${savedColumn}"]`);
+                        if (columnHeader) {
+                            columnHeader.classList.add(savedDirection);
+                            
+                            // Simula un click per ordinare
+                            if (savedDirection === 'desc') {
+                                columnHeader.classList.add('asc');
+                            }
+                            columnHeader.click();
+                        }
+                    }
+                });
+                
+                // Toggle per la visualizzazione compatta
+                const toggleViewBtn = document.getElementById('toggle-view');
+                const tables = document.querySelectorAll('.table');
+                
+                // Ripristina lo stato della vista al caricamento
+                const isCompactView = localStorage.getItem('compact-view') === 'true';
+                if (isCompactView) {
+                    tables.forEach(table => table.classList.add('table-compact'));
+                    toggleViewBtn.innerHTML = '<i class="bi bi-list"></i> Vista standard';
+                }
+                
+                toggleViewBtn.addEventListener('click', function() {
+                    const isCompact = tables[0].classList.contains('table-compact');
+                    
+                    if (isCompact) {
+                        tables.forEach(table => table.classList.remove('table-compact'));
+                        this.innerHTML = '<i class="bi bi-list-ul"></i> Vista compatta';
+                        localStorage.setItem('compact-view', 'false');
+                    } else {
+                        tables.forEach(table => table.classList.add('table-compact'));
+                        this.innerHTML = '<i class="bi bi-list"></i> Vista standard';
+                        localStorage.setItem('compact-view', 'true');
+                    }
+                });
+                
+                // Animazione di rotazione per icone di jobs in progress
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                    .spin {
+                        animation: spin 2s linear infinite;
+                    }
+                `;
+                document.head.appendChild(style);
+            });
+        </script>
+    </th:block>
 </body>
 </html> 
