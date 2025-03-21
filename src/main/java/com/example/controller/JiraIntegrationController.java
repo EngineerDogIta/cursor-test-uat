@@ -59,6 +59,18 @@ public class JiraIntegrationController {
     public String showSearchPage(@RequestParam Long connectionId, Model model, HttpServletRequest request) {
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("connectionId", connectionId);
+        
+        try {
+            // Carica la lista dei progetti da Jira
+            List<Map<String, Object>> projects = jiraService.getProjects(connectionId);
+            model.addAttribute("projects", projects);
+        } catch (Exception e) {
+            logger.error("Errore durante il caricamento dei progetti Jira", e);
+            model.addAttribute("error", "Impossibile caricare i progetti: " + e.getMessage());
+            // Aggiungiamo una lista vuota per evitare errori nel template
+            model.addAttribute("projects", Collections.emptyList());
+        }
+        
         return "views/jira/search";
     }
     

@@ -52,24 +52,152 @@
             </div>
         </div>
         
-        <div class="card">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Progetti disponibili</h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${projects == null || projects.isEmpty()}" class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Nessun progetto disponibile. Verifica la connessione Jira.
+                        </div>
+                        <div th:if="${!projects.isEmpty()}" class="list-group">
+                            <button th:each="project : ${projects}" 
+                                    type="button" 
+                                    class="list-group-item list-group-item-action project-select-item"
+                                    th:attr="data-key=${project.key}" 
+                                    th:text="${project.name + ' (' + project.key + ')'}">
+                                Project name
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Query JQL Pronte all'Uso</h5>
+                        <span id="selected-project-badge" class="badge bg-primary d-none">Nessun progetto selezionato</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> Seleziona un progetto dalla lista a sinistra per generare query JQL personalizzate.
+                        </div>
+                        
+                        <div class="list-group">
+                            <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY}">Tutti i ticket del progetto</button>
+                            <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND status = 'In Progress'">Ticket in corso</button>
+                            <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND created >= -7d">Ticket degli ultimi 7 giorni</button>
+                            <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND fixVersion = latestReleasedVersion()">Ticket nell'ultima versione rilasciata</button>
+                            <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND priority = High ORDER BY created DESC">Ticket ad alta priorità, più recenti prima</button>
+                            <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="assignee = currentUser() AND resolution = unresolved">I miei ticket non risolti</button>
+                            <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND labels = 'test-automation'">Ticket con etichetta test-automation</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">Esempi di Query JQL</h5>
+                <h5 class="card-title mb-0">Query JQL Avanzate</h5>
             </div>
             <div class="card-body">
-                <p>Ecco alcuni esempi di query JQL che puoi utilizzare:</p>
-                <ul>
-                    <li><code>project = PROJ</code> - Tutti i ticket del progetto PROJ</li>
-                    <li><code>project = PROJ AND status = "In Progress"</code> - Ticket in corso del progetto PROJ</li>
-                    <li><code>project = PROJ AND created >= -7d</code> - Ticket creati negli ultimi 7 giorni</li>
-                    <li><code>assignee = currentUser()</code> - Ticket assegnati a te</li>
-                </ul>
+                <div class="list-group">
+                    <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND type = Bug AND status changed FROM 'In Progress' TO 'Done' DURING (startOfWeek(), endOfWeek())">Bug completati questa settimana</button>
+                    <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project in ({PROJECT_KEY}) AND sprint in openSprints()">Ticket negli sprint aperti</button>
+                    <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND text ~ 'test automation'">Ticket con testo "test automation"</button>
+                    <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND issueFunction in linkedIssuesOf('key = {PROJECT_KEY}-123')">Ticket collegati a un ticket specifico</button>
+                    <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND (status changed TO 'In Progress' BY currentUser() OR assignee = currentUser())">Ticket assegnati a me o spostati in corso da me</button>
+                    <button type="button" class="list-group-item list-group-item-action jql-query-item" data-query-template="project = {PROJECT_KEY} AND (type = Bug OR type = 'Test Case') AND component = 'UI'">Bug o Test Case nel componente UI</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Endpoint REST API Jira per Sviluppatori</h5>
+            </div>
+            <div class="card-body">
+                <p>Se hai bisogno di integrare Jira nel tuo codice, ecco gli endpoint principali per la ricerca ticket:</p>
+                
+                <h6 class="mt-3">Ricerca GET (per query semplici):</h6>
+                <pre class="bg-light p-3"><code>GET /rest/api/2/search?jql=project=QA&fields=id,key</code></pre>
+                
+                <h6 class="mt-3">Ricerca POST (per query complesse):</h6>
+                <pre class="bg-light p-3"><code>POST /rest/api/2/search
+Content-Type: application/json
+
+{
+  "jql": "project = QA",
+  "startAt": 0,
+  "maxResults": 10,
+  "fields": ["id", "key", "summary", "status"]
+}</code></pre>
+                
+                <p class="mt-3">
+                    <a href="https://developer.atlassian.com/server/jira/platform/jira-rest-api-examples/" target="_blank" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-box-arrow-up-right"></i> Documentazione ufficiale
+                    </a>
+                </p>
             </div>
         </div>
     </div>
 
     <th:block layout:fragment="extra-js">
         <script th:src="@{/js/jira-integration.js}"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const queryItems = document.querySelectorAll('.jql-query-item');
+                const projectItems = document.querySelectorAll('.project-select-item');
+                const jqlInput = document.getElementById('jql');
+                const projectBadge = document.getElementById('selected-project-badge');
+                
+                let selectedProjectKey = '';
+                
+                // Gestione della selezione del progetto
+                projectItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        // Rimuove la classe attiva da tutti gli elementi
+                        projectItems.forEach(p => p.classList.remove('active'));
+                        
+                        // Aggiunge la classe attiva all'elemento corrente
+                        this.classList.add('active');
+                        
+                        // Memorizza il codice del progetto selezionato
+                        selectedProjectKey = this.getAttribute('data-key');
+                        
+                        // Aggiorna il badge con il progetto selezionato
+                        projectBadge.textContent = 'Progetto: ' + selectedProjectKey;
+                        projectBadge.classList.remove('d-none');
+                    });
+                });
+                
+                // Gestione del click sulle query precompilate
+                queryItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        let queryTemplate = this.getAttribute('data-query-template');
+                        let query = queryTemplate;
+                        
+                        // Se c'è un placeholder per il progetto, lo sostituisce con il progetto selezionato
+                        if (queryTemplate.includes('{PROJECT_KEY}')) {
+                            if (selectedProjectKey) {
+                                query = queryTemplate.replace(/\{PROJECT_KEY\}/g, selectedProjectKey);
+                            } else {
+                                // Se nessun progetto è stato selezionato, mostra un avviso
+                                alert('Seleziona prima un progetto dalla lista a sinistra');
+                                return;
+                            }
+                        }
+                        
+                        jqlInput.value = query;
+                        jqlInput.focus();
+                    });
+                });
+            });
+        </script>
     </th:block>
 </body>
 </html> 

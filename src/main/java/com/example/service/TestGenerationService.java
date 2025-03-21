@@ -156,7 +156,7 @@ public class TestGenerationService {
                 
                 // Salva il risultato nel job e completa
                 job.setTestResult(finalResult);
-                testGenerationRepository.save(job);
+                testGenerationRepository.saveAndFlush(job);
                 
                 completeJob(job.getId());
             } else {
@@ -249,7 +249,7 @@ public class TestGenerationService {
         addJobLog(job, "INFO", "Completamento del job");
         job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
         job.setCompletedAt(LocalDateTime.now());
-        testGenerationRepository.save(job);
+        testGenerationRepository.saveAndFlush(job);
         addJobLog(job, "INFO", "Job completato con successo");
     }
 

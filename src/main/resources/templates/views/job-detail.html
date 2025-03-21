@@ -3,6 +3,7 @@
       layout:decorate="~{layout/main}">
 <head>
     <title>Dettaglio Job</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         pre {
             white-space: pre-wrap;
@@ -22,6 +23,16 @@
         }
         .test-markdown ul, .test-markdown ol {
             margin-left: 1.5rem;
+        }
+        .test-markdown pre {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.25rem;
+        }
+        .test-markdown code {
+            background-color: #f8f9fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
         }
     </style>
 </head>
@@ -82,55 +93,23 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">Risultati dei Test UAT</h5>
+                        <h5 class="card-title mb-0">Genearted Test UAT</h5>
                     </div>
                     <div class="card-body">
-                        <div th:if="${job.status != 'COMPLETED'}" class="alert alert-info">
-                            I risultati dei test UAT saranno disponibili al completamento del job.
-                        </div>
-                        
-                        <div th:if="${job.status == 'COMPLETED' and job.errorMessage == null}" class="test-container">
+                        <!-- Risultati dei test -->
+                        <div class="test-container">
                             <div class="test-markdown">
-                                <!-- Usa il campo testResult del job -->
-                                <div th:if="${job.testResult != null}">
-                                    <pre th:text="${job.testResult}"></pre>
+                                <div th:if="${job.testResult != null and !job.testResult.isEmpty()}" 
+                                     id="test-result-content"
+                                     th:text="${job.testResult}">
                                 </div>
-                                
-                                <!-- Se non troviamo testResult, cerchiamo nei log come fallback -->
-                                <div th:if="${job.testResult == null}">
-                                    <div th:with="testLogs=${job.logs.?[message.contains('Test UAT') || message.contains('SCENARIO:') || message.contains('Generazione dei test completata')]}">
-                                        <div th:if="${!testLogs.isEmpty()}">
-                                            <!-- Trova il log con il messaggio di generazione completata -->
-                                            <div th:with="completedIndex=${testLogs.?[message.contains('Generazione dei test completata')].size() > 0 ? 
-                                                                    testLogs.?[message.contains('Generazione dei test completata')].size() - 1 : -1}">
-                                                
-                                                <!-- Trova il log dei test generati (dovrebbe essere quello precedente o successivo al completato) -->
-                                                <div th:if="${completedIndex >= 0 && completedIndex + 1 < testLogs.size()}">
-                                                    <pre th:text="${testLogs[completedIndex + 1].message}"></pre>
-                                                </div>
-                                                
-                                                <!-- Se non troviamo il messaggio "completato", cerca qualsiasi log con formato di test -->
-                                                <div th:unless="${completedIndex >= 0}">
-                                                    <div th:with="testContentLogs=${job.logs.?[message.contains('##') || message.contains('SCENARIO:')]}">
-                                                        <div th:if="${!testContentLogs.isEmpty()}">
-                                                            <!-- Prendi l'ultimo log che contiene i test -->
-                                                            <pre th:text="${testContentLogs[testContentLogs.size() - 1].message}"></pre>
-                                                        </div>
-                                                        <div th:unless="${!testContentLogs.isEmpty()}" class="alert alert-warning">
-                                                            Non sono stati trovati test generati nei log.
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div th:unless="${!testLogs.isEmpty()}" class="alert alert-warning">
-                                            Non sono stati trovati test generati nei log.
-                                        </div>
-                                    </div>
+                                <div th:unless="${job.testResult != null and !job.testResult.isEmpty()}" class="alert alert-info">
+                                    I risultati dei test UAT non sono ancora disponibili.
                                 </div>
                             </div>
                         </div>
-                        
+
+                        <!-- Messaggio di errore -->
                         <div th:if="${job.status == 'FAILED'}" class="alert alert-danger">
                             <h6>Errore nella Generazione dei Test</h6>
                             <p th:text="${job.errorMessage}"></p>
@@ -148,6 +127,22 @@
         setTimeout(function() {
             window.location.reload();
         }, 30000);
+    </script>
+    <script>
+        // Configura marked per il rendering del markdown
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+        
+        // Converti il contenuto markdown in HTML
+        document.addEventListener('DOMContentLoaded', function() {
+            const testResultContent = document.getElementById('test-result-content');
+            if (testResultContent) {
+                const content = testResultContent.textContent;
+                testResultContent.innerHTML = marked.parse(content);
+            }
+        });
     </script>
 </th:block>
 </body>
