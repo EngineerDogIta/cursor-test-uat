@@ -26,3 +26,18 @@ Thumbs.db
 *.log
 logs/
 data/
+
+# Database SQLite
+data/*.db
+data/*.db-journal
+
+# File temporanei
+*.tmp
+*.temp
+*.bak
+*~
+
+# File di ambiente
+.env
+.env.local
+application-local.properties
