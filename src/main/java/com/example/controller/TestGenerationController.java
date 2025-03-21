@@ -4,6 +4,7 @@ import com.example.agent.TicketAnalyzerAgent;
 import com.example.agent.TestGeneratorAgent;
 import com.example.agent.TestValidatorAgent;
 import com.example.dto.TicketContentDto;
+import com.example.dto.TestGenerationResponseDto;
 import com.example.service.TestGenerationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,16 +32,20 @@ public class TestGenerationController {
     }
 
     @PostMapping("/generate-tests/async")
-    public ResponseEntity<Map<String, String>> startTestGeneration(@Valid @RequestBody TicketContentDto ticketDto) {
+    public ResponseEntity<TestGenerationResponseDto> startTestGeneration(@Valid @RequestBody TicketContentDto ticketDto) {
         if (ticketDto.getContent() == null || ticketDto.getContent().trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Il contenuto del ticket non può essere vuoto"
+            return ResponseEntity.badRequest().body(new TestGenerationResponseDto(
+                null,
+                null,
+                "Il contenuto del ticket non può essere vuoto"
             ));
         }
 
         if (ticketDto.getTicketId() == null || ticketDto.getTicketId().trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "L'ID del ticket non può essere vuoto"
+            return ResponseEntity.badRequest().body(new TestGenerationResponseDto(
+                null,
+                null,
+                "L'ID del ticket non può essere vuoto"
             ));
         }
 
@@ -48,13 +53,12 @@ public class TestGenerationController {
         logger.info("Starting asynchronous test generation for ticket: {} with jobId: {}", 
                    ticketDto.getTicketId(), jobId);
         
-        // Avvia il processo in modo asincrono
         testGenerationService.startTestGeneration(jobId, ticketDto);
         
-        return ResponseEntity.ok(Map.of(
-            "jobId", jobId,
-            "status", "STARTED",
-            "message", "Test generation process started"
+        return ResponseEntity.ok(new TestGenerationResponseDto(
+            jobId,
+            "Generazione dei test avviata con successo",
+            null
         ));
     }
 

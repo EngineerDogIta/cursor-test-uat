@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import com.example.dto.TicketContentDto;
+import com.example.dto.TestGenerationResponseDto;
 import com.example.service.TestGenerationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,9 +40,10 @@ class TestGenerationControllerTest {
 
         // Assert
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().containsKey("jobId"));
-        assertTrue(response.getBody().containsKey("status"));
-        assertEquals("STARTED", response.getBody().get("status"));
+        TestGenerationResponseDto responseDto = response.getBody();
+        assertNotNull(responseDto.getJobId());
+        assertEquals("Generazione dei test avviata con successo", responseDto.getMessage());
+        assertNull(responseDto.getError());
         
         verify(testGenerationService).startTestGeneration(anyString(), eq(ticketDto));
     }
@@ -78,8 +80,11 @@ class TestGenerationControllerTest {
 
         // Assert
         assertEquals(400, response.getStatusCodeValue());
-        assertTrue(response.getBody().containsKey("error"));
-        assertEquals("Il contenuto del ticket non può essere vuoto", response.getBody().get("error"));
+        TestGenerationResponseDto responseDto = response.getBody();
+        assertNotNull(responseDto);
+        assertEquals("Il contenuto del ticket non può essere vuoto", responseDto.getError());
+        assertNull(responseDto.getJobId());
+        assertNull(responseDto.getMessage());
         verify(testGenerationService, never()).startTestGeneration(anyString(), any());
     }
 
@@ -94,8 +99,11 @@ class TestGenerationControllerTest {
 
         // Assert
         assertEquals(400, response.getStatusCodeValue());
-        assertTrue(response.getBody().containsKey("error"));
-        assertEquals("L'ID del ticket non può essere vuoto", response.getBody().get("error"));
+        TestGenerationResponseDto responseDto = response.getBody();
+        assertNotNull(responseDto);
+        assertEquals("L'ID del ticket non può essere vuoto", responseDto.getError());
+        assertNull(responseDto.getJobId());
+        assertNull(responseDto.getMessage());
         verify(testGenerationService, never()).startTestGeneration(anyString(), any());
     }
 
