@@ -73,13 +73,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Gestione esempi JQL
-    const jqlExamples = document.querySelectorAll('.jql-example');
+    const jqlExamples = document.querySelectorAll('.card-body code');
     const jqlInput = document.getElementById('jql');
     
     if (jqlExamples.length > 0 && jqlInput) {
         jqlExamples.forEach(example => {
+            example.style.cursor = 'pointer';
+            example.title = 'Clicca per usare questo esempio';
+            
             example.addEventListener('click', function() {
                 jqlInput.value = this.textContent.trim();
+                jqlInput.focus();
             });
         });
     }

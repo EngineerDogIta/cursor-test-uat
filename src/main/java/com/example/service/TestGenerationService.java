@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,22 +69,18 @@ public class TestGenerationService {
             addJobLog(job, "INFO", "Job creato con ID: " + job.getId());
             addJobLog(job, "INFO", "Componenti coinvolti: " + job.getComponents());
 
-            // Se il ticket proviene da Jira, utilizziamo l'agente dedicato
-            if (ticketDto.getTicketId() != null && ticketDto.getTicketId().matches("^[A-Z]+-\\d+$")) {
-                addJobLog(job, "INFO", "Rilevato ticket Jira valido, utilizzo analizzatore dedicato");
-                processJiraTicketGeneration(job.getId(), ticketDto);
-            } else {
-                processTestGeneration(job.getId(), ticketDto, job.getId());
-            }
+            // Utilizziamo sempre lo stesso metodo per tutti i tipi di ticket
+            addJobLog(job, "INFO", "Processo di generazione test standard avviato");
+            processTestGeneration(job.getId(), ticketDto);
         } catch (Exception e) {
             logger.error("Error starting test generation with ticketDto {}", ticketDto, e);
         }
     }
 
     @Async("taskExecutor")
-    protected void processTestGeneration(Long jobId, TicketContentDto ticketDto, Long jobUid) {
+    protected void processTestGeneration(Long jobId, TicketContentDto ticketDto) {
         try {
-            TestGenerationJob job = testGenerationRepository.findById(jobUid).orElseThrow();
+            TestGenerationJob job = testGenerationRepository.findById(jobId).orElseThrow();
             
             // 1. Analizza il ticket
             addJobLog(job, "INFO", "Inizio analisi del ticket");
@@ -172,7 +169,7 @@ public class TestGenerationService {
             logger.error("Error during test generation process for jobId: " + jobId, e);
             
             // Aggiorna lo stato del job in caso di errore
-            TestGenerationJob job = testGenerationRepository.findById(jobUid).orElseThrow();
+            TestGenerationJob job = testGenerationRepository.findById(jobId).orElseThrow();
             job.setStatus(TestGenerationJob.JobStatus.FAILED);
             job.setErrorMessage(e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
@@ -181,54 +178,7 @@ public class TestGenerationService {
         }
     }
 
-    private void processJiraTicketGeneration(Long jobId, TicketContentDto ticketDto) {
-        TestGenerationJob job = testGenerationRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job non trovato con ID: " + jobId));
-
-        try {
-            job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
-            testGenerationRepository.saveAndFlush(job);
-            addJobLog(job, "INFO", "Avvio analisi del ticket Jira");
-
-            // Analisi del ticket con l'agente dedicato
-            String ticketAnalysis = jiraTicketAnalyzerAgent.analyzeTicket(ticketDto);
-            addJobLog(job, "INFO", "Analisi del ticket completata");
-            addJobLog(job, "DEBUG", "Risultato analisi: " + ticketAnalysis);
-
-            // Generazione dei test basati sull'analisi
-            addJobLog(job, "INFO", "Inizio generazione dei test");
-            String enhancedPrompt = "Genera test UAT per il seguente ticket Jira analizzato";
-            String generatedTests = testGenerator.generateTests(ticketAnalysis, enhancedPrompt);
-            addJobLog(job, "INFO", "Generazione dei test completata");
-
-            // Validazione dei test generati
-            addJobLog(job, "INFO", "Inizio validazione dei test");
-            String validationResult = testValidator.validateTests(ticketAnalysis, generatedTests);
-            addJobLog(job, "INFO", "Validazione dei test completata");
-            addJobLog(job, "DEBUG", "Risultato validazione: " + validationResult);
-
-            // Salvataggio dei risultati
-            String finalResult = "# Test generati per " + ticketDto.getTicketId() + "\n\n"
-                    + "## Analisi del ticket\n" + ticketAnalysis + "\n\n"
-                    + "## Test UAT\n" + generatedTests + "\n\n"
-                    + "## Validazione\n" + validationResult;
-
-            // Salva il risultato nel campo testResult
-            job.setTestResult(finalResult);
-            job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
-            job.setCompletedAt(LocalDateTime.now());
-            testGenerationRepository.saveAndFlush(job);
-            addJobLog(job, "INFO", "Processo completato con successo");
-
-        } catch (Exception e) {
-            job.setStatus(TestGenerationJob.JobStatus.FAILED);
-            job.setErrorMessage(e.getMessage());
-            testGenerationRepository.saveAndFlush(job);
-            addJobLog(job, "ERROR", "Errore durante la generazione dei test: " + e.getMessage());
-            logger.error("Error processing test generation for job {}", jobId, e);
-        }
-    }
-
+    
     public Map<String, Object> getJobStatus(String jobId) {
         try {
             Long jobIdLong = Long.parseLong(jobId);
@@ -281,7 +231,7 @@ public class TestGenerationService {
         
         // Avvia l'elaborazione in modo asincrono solo dopo che il job è stato salvato
         try {
-            processTestGeneration(job.getId(), null, job.getId());
+            processTestGeneration(job.getId(), null);
         } catch (Exception e) {
             logger.error("Errore nell'avvio del processo asincrono per il job {}: {}", job.getId(), e.getMessage());
             // Aggiorna lo stato del job in caso di errore

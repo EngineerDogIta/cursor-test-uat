@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -121,6 +122,33 @@ public class JiraIntegrationService {
                 .map(this::convertToTicketDto)
                 .collect(java.util.stream.Collectors.toList());
                 
+        } catch (HttpClientErrorException e) {
+            logger.error("Errore client HTTP durante la ricerca dei ticket", e);
+            
+            // Estrai informazioni dettagliate sull'errore
+            String errorMessage = "Errore nella ricerca dei ticket";
+            try {
+                // Prova a estrarre i messaggi di errore JSON dalla risposta
+                String responseBody = e.getResponseBodyAsString();
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> errorData = mapper.readValue(responseBody, Map.class);
+                
+                if (errorData.containsKey("errorMessages") && ((List)errorData.get("errorMessages")).size() > 0) {
+                    List<String> errorMessages = (List<String>) errorData.get("errorMessages");
+                    errorMessage = "Errore JQL: " + String.join(", ", errorMessages);
+                } else if (errorData.containsKey("errors") && !((Map)errorData.get("errors")).isEmpty()) {
+                    Map<String, String> errors = (Map<String, String>) errorData.get("errors");
+                    errorMessage = "Errore JQL: " + String.join(", ", errors.values());
+                }
+            } catch (Exception ex) {
+                // Se non riesci a estrarre un messaggio JSON, usa il messaggio di errore standard
+                errorMessage = "Errore durante la ricerca dei ticket: " + e.getStatusText();
+            }
+            
+            throw new RuntimeException(errorMessage);
+        } catch (ResourceAccessException e) {
+            logger.error("Errore di connessione durante la ricerca dei ticket", e);
+            throw new RuntimeException("Impossibile raggiungere il server Jira. Verifica l'URL e la tua connessione.");
         } catch (Exception e) {
             logger.error("Errore durante la ricerca dei ticket", e);
             throw new RuntimeException("Errore nella ricerca dei ticket: " + e.getMessage());

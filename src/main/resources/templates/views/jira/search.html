@@ -20,7 +20,19 @@
 
         <div class="card mb-4">
             <div class="card-body">
-                <div th:if="${error}" class="alert alert-danger mb-4" role="alert" th:text="${error}"></div>
+                <div th:if="${error}" class="alert alert-danger mb-4" role="alert">
+                    <h5 class="alert-heading">Errore durante la ricerca</h5>
+                    <p th:text="${error}"></p>
+                    <hr>
+                    <p class="mb-0 small">
+                        Suggerimenti:
+                        <ul>
+                            <li>Verifica che il codice del progetto sia corretto (es. "PROJECT" e non "PROJ")</li>
+                            <li>Controlla la sintassi della query JQL</li>
+                            <li>Assicurati di avere i permessi per accedere ai ticket</li>
+                        </ul>
+                    </p>
+                </div>
                 
                 <form th:action="@{/jira/search}" method="post">
                     <input type="hidden" name="connectionId" th:value="${connectionId}"/>
@@ -42,23 +54,16 @@
         
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Esempi di query JQL</h5>
+                <h5 class="card-title mb-0">Esempi di Query JQL</h5>
             </div>
             <div class="card-body">
-                <div class="list-group">
-                    <button type="button" class="list-group-item list-group-item-action jql-example">
-                        project = PROJ AND status = 'In Progress'
-                    </button>
-                    <button type="button" class="list-group-item list-group-item-action jql-example">
-                        assignee = currentUser() AND resolution = Unresolved
-                    </button>
-                    <button type="button" class="list-group-item list-group-item-action jql-example">
-                        created >= -30d AND project = PROJ
-                    </button>
-                    <button type="button" class="list-group-item list-group-item-action jql-example">
-                        labels = "test" AND status != Closed
-                    </button>
-                </div>
+                <p>Ecco alcuni esempi di query JQL che puoi utilizzare:</p>
+                <ul>
+                    <li><code>project = PROJ</code> - Tutti i ticket del progetto PROJ</li>
+                    <li><code>project = PROJ AND status = "In Progress"</code> - Ticket in corso del progetto PROJ</li>
+                    <li><code>project = PROJ AND created >= -7d</code> - Ticket creati negli ultimi 7 giorni</li>
+                    <li><code>assignee = currentUser()</code> - Ticket assegnati a te</li>
+                </ul>
             </div>
         </div>
     </div>

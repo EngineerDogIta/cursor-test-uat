@@ -77,8 +77,9 @@ public class JiraIntegrationController {
             return "views/jira/search-results";
         } catch (Exception e) {
             logger.error("Errore durante la ricerca dei ticket", e);
-            model.addAttribute("error", "Errore: " + e.getMessage());
+            model.addAttribute("error", e.getMessage().replace("\"", "&quot;"));
             model.addAttribute("connectionId", connectionId);
+            model.addAttribute("jql", jql);
             return "views/jira/search";
         }
     }
