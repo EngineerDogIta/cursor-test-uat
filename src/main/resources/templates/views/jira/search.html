@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Ricerca Ticket Jira - Test Generation System</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Ricerca Ticket Jira</h2>
+                <p class="text-muted">Cerca i ticket dal tuo server Jira usando JQL</p>
+            </div>
+            <div class="col text-end">
+                <a th:href="@{/jira/connections}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Torna alle connessioni
+                </a>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div th:if="${error}" class="alert alert-danger mb-4" role="alert" th:text="${error}"></div>
+                
+                <form th:action="@{/jira/search}" method="post">
+                    <input type="hidden" name="connectionId" th:value="${connectionId}"/>
+                    
+                    <div class="mb-3">
+                        <label for="jql" class="form-label">Query JQL</label>
+                        <input type="text" class="form-control" id="jql" name="jql" required
+                               th:value="${jql ?: ''}"
+                               placeholder="project = PROJ AND status = 'In Progress'"/>
+                        <div class="form-text">Inserisci una query JQL valida per cercare i ticket.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">Cerca</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Esempi di query JQL</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <button type="button" class="list-group-item list-group-item-action jql-example">
+                        project = PROJ AND status = 'In Progress'
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action jql-example">
+                        assignee = currentUser() AND resolution = Unresolved
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action jql-example">
+                        created >= -30d AND project = PROJ
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action jql-example">
+                        labels = "test" AND status != Closed
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block layout:fragment="extra-js">
+        <script th:src="@{/js/jira-integration.js}"></script>
+    </th:block>
+</body>
+</html> 

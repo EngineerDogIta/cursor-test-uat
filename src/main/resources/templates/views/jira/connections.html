@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Connessioni Jira - Test Generation System</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Connessioni Jira</h2>
+                <p class="text-muted">Gestisci le tue connessioni a Jira</p>
+            </div>
+            <div class="col text-end">
+                <a th:href="@{/jira/connect}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Nuova Connessione
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div th:if="${connections.empty}" class="alert alert-info">
+                    Non hai ancora configurato connessioni a Jira. Crea una nuova connessione per iniziare.
+                </div>
+                
+                <div th:if="${not connections.empty}" class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Server</th>
+                                <th>Nome utente</th>
+                                <th>Data creazione</th>
+                                <th>Ultimo utilizzo</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="conn : ${connections}">
+                                <td th:text="${conn.serverUrl}"></td>
+                                <td th:text="${conn.username}"></td>
+                                <td th:text="${#temporals.format(conn.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                <td th:text="${conn.lastUsedAt != null ? #temporals.format(conn.lastUsedAt, 'dd/MM/yyyy HH:mm') : 'Mai utilizzata'}"></td>
+                                <td>
+                                    <a th:href="@{/jira/search(connectionId=${conn.id})}" class="btn btn-sm btn-primary">Cerca Ticket</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

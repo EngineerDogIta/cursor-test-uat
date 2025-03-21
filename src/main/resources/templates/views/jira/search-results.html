@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Risultati Ricerca - Test Generation System</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Risultati Ricerca</h2>
+                <p class="text-muted" th:text="${'Query: ' + jql}"></p>
+            </div>
+            <div class="col text-end">
+                <a th:href="@{/jira/search(connectionId=${connectionId})}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Nuova Ricerca
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div th:if="${tickets.empty}" class="alert alert-info">
+                    Nessun ticket trovato con i criteri specificati.
+                </div>
+                
+                <div th:if="${not tickets.empty}" class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID Ticket</th>
+                                <th>Sommario</th>
+                                <th>Componenti</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="ticket : ${tickets}">
+                                <td th:text="${ticket.ticketId}"></td>
+                                <td th:text="${#strings.length(ticket.content) > 200 ? #strings.substring(ticket.content, 0, 200) + '...' : ticket.content}">
+                                    Contenuto del ticket...
+                                </td>
+                                <td>
+                                    <div class="mt-2">
+                                        <span th:each="component : ${ticket.components}" 
+                                              class="badge bg-secondary me-1" 
+                                              th:text="${component}">Component</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a th:href="@{/jira/ticket/{ticketId}(ticketId=${ticket.ticketId}, connectionId=${connectionId})}" 
+                                       class="btn btn-sm btn-primary">Dettagli</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

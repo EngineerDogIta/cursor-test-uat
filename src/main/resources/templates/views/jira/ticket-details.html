@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Dettaglio Ticket - Test Generation System</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row mb-4">
+            <div class="col">
+                <h2 th:text="${'Ticket: ' + ticket.ticketId}"></h2>
+                <div>
+                    <span th:each="component : ${ticket.components}" 
+                          class="badge bg-secondary me-1" 
+                          th:text="${component}"></span>
+                </div>
+            </div>
+            <div class="col text-end">
+                <a th:href="@{/jira/search(connectionId=${connectionId})}" class="btn btn-secondary me-2">
+                    <i class="bi bi-arrow-left"></i> Torna alla ricerca
+                </a>
+                <form th:action="@{/jira/import/{id}(id=${ticket.ticketId})}" method="post" class="d-inline">
+                    <input type="hidden" name="connectionId" th:value="${connectionId}"/>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-cloud-download"></i> Importa e Genera Test
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Dettagli Ticket</h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${error}" class="alert alert-danger mb-4" role="alert" th:text="${error}"></div>
+                
+                <div class="ticket-content">
+                    <pre class="p-3 bg-light rounded" th:text="${ticket.content}"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

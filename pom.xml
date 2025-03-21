@@ -45,6 +45,11 @@
                 <enabled>true</enabled>
             </releases>
         </repository>
+        <repository>
+            <id>atlassian-public</id>
+            <name>Atlassian Public Repository</name>
+            <url>https://packages.atlassian.com/maven/repository/public</url>
+        </repository>
     </repositories>
     
     <dependencies>
@@ -137,6 +142,13 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>test</scope>
+        </dependency>
+        
+        <!-- Jira REST API Client -->
+        <dependency>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+            <version>3.1.0</version>
         </dependency>
     </dependencies>
     
