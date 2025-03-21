@@ -73,6 +73,38 @@ document.addEventListener('DOMContentLoaded', function() {
         table.parentNode.insertBefore(wrapper, table);
         wrapper.appendChild(table);
     });
+
+    // Gestione dell'eliminazione dei job
+    document.body.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-job-btn')) {
+            const button = e.target.closest('.delete-job-btn');
+            const jobId = button.dataset.jobId;
+            const ticketId = button.dataset.ticketId;
+            
+            // Dialog di conferma personalizzato
+            if (confirm(`Sei sicuro di voler eliminare il job per il ticket ${ticketId}?\nQuesta azione è irreversibile.`)) {
+                fetch(`/api/jobs/${jobId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text) });
+                    }
+                    // Rimuovi la riga con una breve animazione
+                    const row = button.closest('tr');
+                    row.style.transition = 'opacity 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 300);
+                })
+                .catch(error => {
+                    alert('Errore durante l\'eliminazione: ' + error.message);
+                });
+            }
+        }
+    });
 });
 
 // Gestione degli errori

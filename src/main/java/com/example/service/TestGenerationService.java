@@ -458,4 +458,19 @@ public class TestGenerationService {
             return "UNKNOWN";
         }
     }
+
+    @Transactional
+    public void deleteJob(Long jobId) {
+        TestGenerationJob job = testGenerationRepository.findById(jobId)
+            .orElseThrow(() -> new RuntimeException("Job non trovato: " + jobId));
+        
+        // Verifica solo che il job non sia in esecuzione
+        if (job.getStatus() == TestGenerationJob.JobStatus.IN_PROGRESS) {
+            throw new RuntimeException("Impossibile eliminare un job in esecuzione");
+        }
+        
+        // Elimina il job e i suoi log (cascade delete)
+        testGenerationRepository.delete(job);
+        logger.info("Job {} eliminato con successo", jobId);
+    }
 } 

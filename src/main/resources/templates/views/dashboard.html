@@ -40,7 +40,6 @@
                             <table class="table table-hover" id="active-jobs-table">
                                 <thead>
                                     <tr>
-                                        <th class="sortable" data-column="id">ID<span class="column-tooltip">Click to sort</span></th>
                                         <th class="sortable" data-column="jiraTicket">Jira Ticket<span class="column-tooltip">Click to sort</span></th>
                                         <th class="sortable" data-column="status">Status<span class="column-tooltip">Click to sort</span></th>
                                         <th class="sortable" data-column="createdAt">Creation Date<span class="column-tooltip">Click to sort</span></th>
@@ -49,7 +48,6 @@
                                 </thead>
                                 <tbody>
                                     <tr th:each="job : ${activeJobs}">
-                                        <td th:text="${job.id}" th:data-value="${job.id}"></td>
                                         <td th:text="${job.jiraTicket}" th:data-value="${job.jiraTicket}"></td>
                                         <td th:data-value="${job.status}">
                                             <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
@@ -67,9 +65,17 @@
                                         </td>
                                         <td th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}" th:data-value="${job.createdAt}"></td>
                                         <td>
-                                            <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
-                                                <i class="bi bi-eye"></i> Details
-                                            </a>
+                                            <div class="btn-group">
+                                                <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info me-1">
+                                                    <i class="bi bi-eye"></i> Dettagli
+                                                </a>
+                                                <button th:if="${job.status != T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS}"
+                                                        class="btn btn-sm btn-danger delete-job-btn" 
+                                                        th:data-job-id="${job.id}"
+                                                        th:data-ticket-id="${job.jiraTicket}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -90,7 +96,6 @@
                             <table class="table table-hover" id="completed-jobs-table">
                                 <thead>
                                     <tr>
-                                        <th class="sortable" data-column="id">ID<span class="column-tooltip">Click to sort</span></th>
                                         <th class="sortable" data-column="jiraTicket">Jira Ticket<span class="column-tooltip">Click to sort</span></th>
                                         <th class="sortable" data-column="status">Status<span class="column-tooltip">Click to sort</span></th>
                                         <th class="sortable" data-column="completedAt">Completion Date<span class="column-tooltip">Click to sort</span></th>
@@ -99,7 +104,6 @@
                                 </thead>
                                 <tbody>
                                     <tr th:each="job : ${completedJobs}">
-                                        <td th:text="${job.id}" th:data-value="${job.id}"></td>
                                         <td th:text="${job.jiraTicket}" th:data-value="${job.jiraTicket}"></td>
                                         <td th:data-value="${job.status}">
                                             <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
@@ -117,9 +121,17 @@
                                         </td>
                                         <td th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}" th:data-value="${job.completedAt}"></td>
                                         <td>
-                                            <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
-                                                <i class="bi bi-eye"></i> Details
-                                            </a>
+                                            <div class="btn-group">
+                                                <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info me-1">
+                                                    <i class="bi bi-eye"></i> Dettagli
+                                                </a>
+                                                <button th:if="${job.status != T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS}"
+                                                        class="btn btn-sm btn-danger delete-job-btn" 
+                                                        th:data-job-id="${job.id}"
+                                                        th:data-ticket-id="${job.jiraTicket}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>

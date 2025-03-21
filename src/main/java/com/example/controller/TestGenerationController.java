@@ -118,4 +118,17 @@ public class TestGenerationController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    @DeleteMapping("/jobs/{jobId}")
+    public ResponseEntity<String> deleteJob(@PathVariable String jobId) {
+        try {
+            Long jobIdLong = Long.parseLong(jobId);
+            testGenerationService.deleteJob(jobIdLong);
+            return ResponseEntity.ok("Job eliminato con successo");
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("ID job non valido");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 } 
