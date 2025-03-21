@@ -47,8 +47,6 @@ public class TestGenerationService {
     @Async("taskExecutor")
     public void startTestGeneration(TicketContentDto ticketDto) {
         try {
-            addJobLog(null, "INFO", "Inizio processo di generazione test per il ticket: " + ticketDto.getTicketId());
-            
             // Crea e salva il job
             TestGenerationJob job = new TestGenerationJob();
             job.setJiraTicket(ticketDto.getTicketId());
@@ -58,13 +56,14 @@ public class TestGenerationService {
             job.setCreatedAt(LocalDateTime.now());
             testGenerationRepository.saveAndFlush(job);
             
+            // Ora possiamo loggare con il job creato
+            addJobLog(job, "INFO", "Inizio processo di generazione test per il ticket: " + ticketDto.getTicketId());
             addJobLog(job, "INFO", "Job creato con ID: " + job.getId());
             addJobLog(job, "INFO", "Componenti coinvolti: " + job.getComponents());
 
             processTestGeneration(job.getId(), ticketDto, job.getId());
         } catch (Exception e) {
             logger.error("Error starting test generation with ticketDto {}", ticketDto, e);
-            addJobLog(null, "ERROR", "Errore nell'avvio del processo: " + e.getMessage());
         }
     }
 
@@ -278,12 +277,30 @@ public class TestGenerationService {
 
     @Transactional
     private void addJobLog(TestGenerationJob job, String level, String message) {
-        JobLog log = new JobLog();
-        log.setJob(job);
-        log.setLevel(level);
-        log.setMessage(message);
-        log.setTimestamp(LocalDateTime.now());
-        jobLogRepository.save(log);
-        job.addLog(log);
+        if (job == null) {
+            // Se il job è null, logga solo nel logger di sistema
+            logger.info("[NO_JOB] {} - {}", level, message);
+            return;
+        }
+        
+        try {
+            // Ricarica il job per assicurarsi che sia nella sessione corrente
+            job = testGenerationRepository.findById(job.getId()).orElseThrow();
+            
+            JobLog log = new JobLog();
+            log.setJob(job);
+            log.setLevel(level);
+            log.setMessage(message);
+            log.setTimestamp(LocalDateTime.now());
+            
+            // Salva solo il log, non è necessario aggiornare il job
+            jobLogRepository.save(log);
+            
+            logger.debug("Log aggiunto con successo per il job {}: {} - {}", job.getId(), level, message);
+        } catch (Exception e) {
+            logger.error("Errore durante l'aggiunta del log per il job {}: {}", job.getId(), e.getMessage());
+            // Fallback: logga solo nel logger di sistema
+            logger.info("[JOB_{}] {} - {}", job.getId(), level, message);
+        }
     }
 } 
