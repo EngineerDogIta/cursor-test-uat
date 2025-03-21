@@ -216,37 +216,32 @@ public class JiraIntegrationService {
     }
     
     private TicketContentDto convertToTicketDto(JiraIssueDto issue) {
-        TicketContentDto dto = new TicketContentDto();
-        dto.setTicketId(issue.getKey());
-        
         JiraIssueFieldsDto fields = issue.getFields();
         StringBuilder content = new StringBuilder();
         content.append("Sommario: ").append(fields.getSummary()).append("\n\n");
-        
         if (fields.getDescription() != null) {
             content.append("Descrizione: ").append(fields.getDescription()).append("\n\n");
         }
-        
         JiraStatusDto status = fields.getStatus();
         if (status != null) {
             content.append("Stato: ").append(status.getName()).append("\n");
         }
-        
         JiraIssueTypeDto issueType = fields.getIssuetype();
         if (issueType != null) {
             content.append("Tipo: ").append(issueType.getName()).append("\n");
         }
-        
-        dto.setContent(content.toString());
         
         List<String> components = new ArrayList<>();
         List<JiraComponentDto> componentsList = fields.getComponents();
         if (componentsList != null) {
             componentsList.forEach(component -> components.add(component.getName()));
         }
-        dto.setComponents(components);
         
-        return dto;
+        return new TicketContentDto.Builder()
+                .setContent(content.toString())
+                .setTicketId(issue.getKey())
+                .setComponents(components)
+                .build();
     }
     
     private HttpHeaders createHeaders(String username, String apiToken) {

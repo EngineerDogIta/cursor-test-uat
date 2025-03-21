@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-public class JiraTicketAnalyzerAgent {
+public class JiraTicketAnalyzerAgent implements ITicketAnalyzer {
     private static final Logger logger = LoggerFactory.getLogger(JiraTicketAnalyzerAgent.class);
     private final ChatClient chatClient;
     private static final String SYSTEM_PROMPT = """
@@ -59,6 +59,7 @@ public class JiraTicketAnalyzerAgent {
         this.chatClient = chatClient;
     }
     
+    @Override
     public String analyzeTicket(TicketContentDto ticketDto) {
         String ticketId = ticketDto.getTicketId();
         MDC.put("ticketId", ticketId);
@@ -70,17 +71,16 @@ public class JiraTicketAnalyzerAgent {
             ticketDto.getContent().length());
         
         try {
-            String userPrompt = """
+            String userPrompt = String.format("""
                 Analyze this Jira ticket in detail.
                 
                 Ticket ID: %s
                 Components: %s
                 Content: %s
-                """.formatted(
+                """, 
                     ticketId,
                     String.join(", ", ticketDto.getComponents()),
-                    ticketDto.getContent()
-                );
+                    ticketDto.getContent());
             
             logger.debug("Prompt generato per l'analisi");
             Prompt prompt = new Prompt(SYSTEM_PROMPT + "\n\n" + userPrompt);
@@ -95,7 +95,7 @@ public class JiraTicketAnalyzerAgent {
             
         } catch (Exception e) {
             logger.error("Errore durante l'analisi del ticket Jira", e);
-            throw new TicketAnalysisException("Impossibile analizzare il ticket Jira: " + e.getMessage(), e);
+            throw new com.example.exception.TicketAnalysisException("Impossibile analizzare il ticket Jira: " + e.getMessage(), e);
         } finally {
             MDC.remove("ticketId");
             MDC.remove("operation");

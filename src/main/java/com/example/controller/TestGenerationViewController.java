@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 
 @Controller
 @RequestMapping("/")
@@ -31,7 +32,11 @@ public class TestGenerationViewController {
     @GetMapping("/ticket-form")
     public String ticketForm(Model model, HttpServletRequest request) {
         model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("ticketRequest", new TicketContentDto());
+        model.addAttribute("ticketRequest", new TicketContentDto.Builder()
+            .setContent("")
+            .setTicketId("")
+            .setComponents(new ArrayList<>())
+            .build());
         return "views/ticket-form";
     }
 

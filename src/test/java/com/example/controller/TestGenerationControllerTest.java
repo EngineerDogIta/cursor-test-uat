@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 class TestGenerationControllerTest {
 
@@ -43,9 +44,11 @@ class TestGenerationControllerTest {
     @Test
     void startTestGeneration_ShouldReturnJobId() {
         // Arrange
-        TicketContentDto ticketDto = new TicketContentDto();
-        ticketDto.setContent("Test ticket content");
-        ticketDto.setTicketId("TEST-123");
+        TicketContentDto ticketDto = new TicketContentDto.Builder()
+            .setContent("Test ticket content")
+            .setTicketId("TEST-123")
+            .setComponents(new ArrayList<>())
+            .build();
 
         // Act
         var response = controller.startTestGeneration(ticketDto);
