@@ -1,8 +1,10 @@
 package com.example.agent;
 
 import com.example.dto.TicketContentDto;
+import com.example.exception.TicketAnalysisException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.ai.chat.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,9 +60,12 @@ public class JiraTicketAnalyzerAgent {
     }
     
     public String analyzeTicket(TicketContentDto ticketDto) {
-        logger.info("Iniziando analisi del ticket Jira: {}", ticketDto.getTicketId());
-        logger.debug("Dettagli del ticket - ID: {}, Componenti: {}, Lunghezza contenuto: {} caratteri", 
-            ticketDto.getTicketId(), 
+        String ticketId = ticketDto.getTicketId();
+        MDC.put("ticketId", ticketId);
+        MDC.put("operation", "analyzeTicket");
+        
+        logger.info("Iniziando analisi del ticket Jira");
+        logger.debug("Dettagli del ticket - Componenti: {}, Lunghezza contenuto: {} caratteri", 
             String.join(", ", ticketDto.getComponents()),
             ticketDto.getContent().length());
         
@@ -72,30 +77,28 @@ public class JiraTicketAnalyzerAgent {
                 Components: %s
                 Content: %s
                 """.formatted(
-                    ticketDto.getTicketId(),
+                    ticketId,
                     String.join(", ", ticketDto.getComponents()),
                     ticketDto.getContent()
                 );
             
-            logger.debug("Prompt generato per l'analisi: {}", userPrompt);
+            logger.debug("Prompt generato per l'analisi");
             Prompt prompt = new Prompt(SYSTEM_PROMPT + "\n\n" + userPrompt);
             
-            logger.debug("Inviando richiesta al modello di analisi...");
+            logger.debug("Inviando richiesta al modello di analisi");
             String analysis = chatClient.call(prompt).getResult().getOutput().getContent();
             
-            logger.info("Analisi completata per il ticket: {}", ticketDto.getTicketId());
-            logger.debug("Risultato dell'analisi - Lunghezza: {} caratteri, Prima riga: {}", 
-                analysis.length(),
-                analysis.split("\n")[0]);
+            logger.info("Analisi completata con successo");
+            logger.debug("Risultato dell'analisi - Lunghezza: {} caratteri", analysis.length());
             
             return analysis;
             
         } catch (Exception e) {
-            logger.error("Errore durante l'analisi del ticket Jira: {} - {}", 
-                ticketDto.getTicketId(), 
-                e.getMessage(), 
-                e);
-            throw new RuntimeException("Impossibile analizzare il ticket Jira: " + e.getMessage(), e);
+            logger.error("Errore durante l'analisi del ticket Jira", e);
+            throw new TicketAnalysisException("Impossibile analizzare il ticket Jira: " + e.getMessage(), e);
+        } finally {
+            MDC.remove("ticketId");
+            MDC.remove("operation");
         }
     }
 } 

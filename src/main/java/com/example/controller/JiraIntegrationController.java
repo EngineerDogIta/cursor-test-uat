@@ -4,9 +4,11 @@ import com.example.dto.*;
 import com.example.model.JiraConnection;
 import com.example.service.JiraIntegrationService;
 import com.example.service.TestGenerationService;
+import com.example.exception.TicketAnalysisException;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -77,19 +79,35 @@ public class JiraIntegrationController {
             @RequestParam String jql,
             Model model,
             HttpServletRequest request) {
+        MDC.put("connectionId", connectionId.toString());
+        MDC.put("operation", "searchTickets");
+        
         try {
+            logger.info("Iniziando ricerca ticket");
             model.addAttribute("currentUri", request.getRequestURI());
             List<TicketContentDto> tickets = jiraService.searchTickets(connectionId, jql);
             model.addAttribute("tickets", tickets);
             model.addAttribute("connectionId", connectionId);
             model.addAttribute("jql", jql);
+            
+            logger.info("Ricerca ticket completata con successo - {} ticket trovati", tickets.size());
             return "views/jira/search-results";
-        } catch (Exception e) {
+            
+        } catch (TicketAnalysisException e) {
             logger.error("Errore durante la ricerca dei ticket", e);
             model.addAttribute("error", e.getMessage().replace("\"", "&quot;"));
             model.addAttribute("connectionId", connectionId);
             model.addAttribute("jql", jql);
             return "views/jira/search";
+        } catch (Exception e) {
+            logger.error("Errore imprevisto durante la ricerca dei ticket", e);
+            model.addAttribute("error", "Si è verificato un errore imprevisto durante la ricerca dei ticket");
+            model.addAttribute("connectionId", connectionId);
+            model.addAttribute("jql", jql);
+            return "views/jira/search";
+        } finally {
+            MDC.remove("connectionId");
+            MDC.remove("operation");
         }
     }
     
@@ -99,16 +117,32 @@ public class JiraIntegrationController {
             @PathVariable String ticketId,
             Model model,
             HttpServletRequest request) {
+        MDC.put("connectionId", connectionId.toString());
+        MDC.put("ticketId", ticketId);
+        MDC.put("operation", "showTicketDetails");
+        
         try {
+            logger.info("Iniziando recupero dettagli ticket");
             model.addAttribute("currentUri", request.getRequestURI());
             TicketContentDto ticket = jiraService.getTicketDetails(connectionId, ticketId);
             model.addAttribute("ticket", ticket);
             model.addAttribute("connectionId", connectionId);
+            
+            logger.info("Recupero dettagli ticket completato con successo");
             return "views/jira/ticket-details";
-        } catch (Exception e) {
+            
+        } catch (TicketAnalysisException e) {
             logger.error("Errore durante il recupero del ticket", e);
             model.addAttribute("error", "Errore: " + e.getMessage());
             return "redirect:/jira/search?connectionId=" + connectionId;
+        } catch (Exception e) {
+            logger.error("Errore imprevisto durante il recupero del ticket", e);
+            model.addAttribute("error", "Si è verificato un errore imprevisto durante il recupero del ticket");
+            return "redirect:/jira/search?connectionId=" + connectionId;
+        } finally {
+            MDC.remove("connectionId");
+            MDC.remove("ticketId");
+            MDC.remove("operation");
         }
     }
     

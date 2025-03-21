@@ -1,6 +1,10 @@
 package com.example.service;
 
+import com.example.agent.JiraTicketAnalyzerAgent;
+import com.example.agent.TestGeneratorAgent;
+import com.example.agent.TestValidatorAgent;
 import com.example.dto.*;
+import com.example.exception.TicketAnalysisException;
 import com.example.model.JiraConnection;
 import com.example.repository.JiraConnectionRepository;
 import org.slf4j.Logger;
@@ -13,6 +17,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.MDC;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -94,8 +99,11 @@ public class JiraIntegrationService {
     }
     
     public List<TicketContentDto> searchTickets(Long connectionId, String jql) {
+        MDC.put("connectionId", connectionId.toString());
+        MDC.put("operation", "searchTickets");
+        
         JiraConnection connection = jiraConnectionRepository.findById(connectionId)
-                .orElseThrow(() -> new RuntimeException("Connessione Jira non trovata"));
+                .orElseThrow(() -> new TicketAnalysisException("Connessione Jira non trovata"));
         
         String url = connection.getServerUrl().endsWith("/")
             ? connection.getServerUrl() + "rest/api/2/search"
@@ -108,6 +116,7 @@ public class JiraIntegrationService {
         HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
         
         try {
+            logger.info("Iniziando ricerca ticket con JQL");
             ResponseEntity<JiraSearchResponseDto> response = restTemplate.exchange(
                 url,
                 HttpMethod.POST,
@@ -116,12 +125,15 @@ public class JiraIntegrationService {
             );
             
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                throw new RuntimeException("Errore nella ricerca dei ticket");
+                throw new TicketAnalysisException("Errore nella ricerca dei ticket");
             }
             
-            return response.getBody().getIssues().stream()
+            List<TicketContentDto> results = response.getBody().getIssues().stream()
                 .map(this::convertToTicketDto)
                 .collect(java.util.stream.Collectors.toList());
+                
+            logger.info("Ricerca completata con successo - {} ticket trovati", results.size());
+            return results;
                 
         } catch (HttpClientErrorException e) {
             logger.error("Errore client HTTP durante la ricerca dei ticket", e);
@@ -140,19 +152,26 @@ public class JiraIntegrationService {
                 errorMessage = "Errore durante la ricerca dei ticket: " + e.getStatusText();
             }
             
-            throw new RuntimeException(errorMessage);
+            throw new TicketAnalysisException(errorMessage, e);
         } catch (ResourceAccessException e) {
             logger.error("Errore di connessione durante la ricerca dei ticket", e);
-            throw new RuntimeException("Impossibile raggiungere il server Jira. Verifica l'URL e la tua connessione.");
+            throw new TicketAnalysisException("Impossibile raggiungere il server Jira. Verifica l'URL e la tua connessione.", e);
         } catch (Exception e) {
             logger.error("Errore durante la ricerca dei ticket", e);
-            throw new RuntimeException("Errore nella ricerca dei ticket: " + e.getMessage());
+            throw new TicketAnalysisException("Errore nella ricerca dei ticket: " + e.getMessage(), e);
+        } finally {
+            MDC.remove("connectionId");
+            MDC.remove("operation");
         }
     }
     
     public TicketContentDto getTicketDetails(Long connectionId, String ticketId) {
+        MDC.put("connectionId", connectionId.toString());
+        MDC.put("ticketId", ticketId);
+        MDC.put("operation", "getTicketDetails");
+        
         JiraConnection connection = jiraConnectionRepository.findById(connectionId)
-                .orElseThrow(() -> new RuntimeException("Connessione Jira non trovata"));
+                .orElseThrow(() -> new TicketAnalysisException("Connessione Jira non trovata"));
         
         connection.setLastUsedAt(LocalDateTime.now());
         jiraConnectionRepository.save(connection);
@@ -165,6 +184,7 @@ public class JiraIntegrationService {
         HttpEntity<String> entity = new HttpEntity<>(headers);
         
         try {
+            logger.info("Iniziando recupero dettagli ticket");
             ResponseEntity<JiraIssueDto> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
@@ -173,20 +193,25 @@ public class JiraIntegrationService {
             );
             
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                throw new RuntimeException("Errore nel recupero del ticket");
+                throw new TicketAnalysisException("Errore nel recupero del ticket");
             }
             
+            logger.info("Recupero dettagli ticket completato con successo");
             return convertToTicketDto(response.getBody());
             
         } catch (HttpClientErrorException e) {
-            logger.error("Errore client HTTP durante il recupero del ticket: {}", ticketId, e);
+            logger.error("Errore client HTTP durante il recupero del ticket", e);
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                throw new RuntimeException("Ticket non trovato: " + ticketId);
+                throw new TicketAnalysisException("Ticket non trovato: " + ticketId, e);
             }
-            throw new RuntimeException("Errore nel recupero del ticket: " + e.getMessage());
+            throw new TicketAnalysisException("Errore nel recupero del ticket: " + e.getMessage(), e);
         } catch (Exception e) {
-            logger.error("Errore durante il recupero del ticket: {}", ticketId, e);
-            throw new RuntimeException("Errore nel recupero del ticket: " + e.getMessage());
+            logger.error("Errore durante il recupero del ticket", e);
+            throw new TicketAnalysisException("Errore nel recupero del ticket: " + e.getMessage(), e);
+        } finally {
+            MDC.remove("connectionId");
+            MDC.remove("ticketId");
+            MDC.remove("operation");
         }
     }
     
