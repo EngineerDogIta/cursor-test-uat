@@ -39,6 +39,9 @@ public class TestGenerationJob {
 
     @Column
     private LocalDateTime completedAt;
+    
+    @Column(columnDefinition = "TEXT")
+    private String testResult;
 
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<JobLog> logs = new ArrayList<>();

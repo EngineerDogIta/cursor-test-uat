@@ -150,6 +150,17 @@ public class TestGenerationService {
             // 4. Verifica della qualità finale
             if (testsValidated) {
                 addJobLog(job, "INFO", "Test validati con successo");
+                
+                // Crea il risultato finale
+                String finalResult = "# Test generati per " + job.getJiraTicket() + "\n\n"
+                    + "## Analisi del ticket\n" + ticketAnalysis + "\n\n"
+                    + "## Test UAT\n" + generatedTests + "\n\n"
+                    + "## Validazione\n" + validationResults;
+                
+                // Salva il risultato nel job e completa
+                job.setTestResult(finalResult);
+                testGenerationRepository.save(job);
+                
                 completeJob(job.getId());
             } else {
                 String errorMsg = "La qualità dei test generati non è sufficiente dopo " + MAX_ATTEMPTS + " tentativi";
@@ -202,6 +213,8 @@ public class TestGenerationService {
                     + "## Test UAT\n" + generatedTests + "\n\n"
                     + "## Validazione\n" + validationResult;
 
+            // Salva il risultato nel campo testResult
+            job.setTestResult(finalResult);
             job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
             job.setCompletedAt(LocalDateTime.now());
             testGenerationRepository.saveAndFlush(job);
