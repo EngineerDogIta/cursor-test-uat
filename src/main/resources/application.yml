@@ -4,18 +4,16 @@ spring:
       base-url: http://localhost:11434
       model: gemma3:1b
       options:
-        temperature: 0.7
-        top_p: 0.9
-        top_k: 40
+        temperature: 1.0
+        top_p: 0.95
+        top_k: 64
+        repeat_penalty: 1.0
+        num_ctx: 4096
         num_predict: 256
         stop: ["</s>", "USER:", "ASSISTANT:"]
-        num_ctx: 4096
         num_batch: 512
         num_gpu: 1
         num_thread: 8
-        repeat_penalty: 1.1
-        repeat_last_n: 64
-        tfs_z: 1
         num_keep: 48
         seed: -1
         mirostat: 2
