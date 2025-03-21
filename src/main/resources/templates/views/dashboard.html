@@ -21,86 +21,92 @@
             </div>
         </div>
 
-        <!-- Job in corso -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Jobs in Progress</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Jira Ticket</th>
-                                <th>Status</th>
-                                <th>Creation Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr th:each="job : ${activeJobs}">
-                                <td th:text="${job.id}"></td>
-                                <td th:text="${job.jiraTicket}"></td>
-                                <td>
-                                    <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
+        <div class="row">
+            <!-- Colonna sinistra: Jobs in Progress -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Jobs in Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Jira Ticket</th>
+                                        <th>Status</th>
+                                        <th>Creation Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="job : ${activeJobs}">
+                                        <td th:text="${job.id}"></td>
+                                        <td th:text="${job.jiraTicket}"></td>
+                                        <td>
+                                            <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
                                                    'badge bg-info text-white status-badge'}"
-                                          th:text="${job.status}"></span>
-                                </td>
-                                <td th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
-                                <td>
-                                    <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
-                                        <i class="bi bi-eye"></i> Details
-                                    </a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                              th:text="${job.status}"></span>
+                                        </td>
+                                        <td th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                        <td>
+                                            <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i> Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Job completati -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Completed Jobs</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Jira Ticket</th>
-                                <th>Status</th>
-                                <th>Completion Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr th:each="job : ${completedJobs}">
-                                <td th:text="${job.id}"></td>
-                                <td th:text="${job.jiraTicket}"></td>
-                                <td>
-                                    <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
+            <!-- Colonna destra: Completed Jobs -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Completed Jobs</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Jira Ticket</th>
+                                        <th>Status</th>
+                                        <th>Completion Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="job : ${completedJobs}">
+                                        <td th:text="${job.id}"></td>
+                                        <td th:text="${job.jiraTicket}"></td>
+                                        <td>
+                                            <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
                                                    job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
                                                    'badge bg-info text-white status-badge'}"
-                                          th:text="${job.status}"></span>
-                                </td>
-                                <td th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}"></td>
-                                <td>
-                                    <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
-                                        <i class="bi bi-eye"></i> Details
-                                    </a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                              th:text="${job.status}"></span>
+                                        </td>
+                                        <td th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                        <td>
+                                            <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i> Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
