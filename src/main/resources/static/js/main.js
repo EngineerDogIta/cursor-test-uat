@@ -12,7 +12,7 @@ const formatDate = (date) => {
 // Gestione dei form
 document.addEventListener('DOMContentLoaded', function() {
     // Conferma prima dell'invio del form
-    const forms = document.querySelectorAll('form');
+    const forms = document.querySelectorAll('form:not(.no-confirmation)');
     forms.forEach(form => {
         form.addEventListener('submit', function(e) {
             if (!confirm('Sei sicuro di voler procedere?')) {

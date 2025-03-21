@@ -20,7 +20,7 @@
 
         <div class="card">
             <div class="card-body">
-                <form th:action="@{/ticket/submit}" th:object="${ticketRequest}" method="post">
+                <form th:action="@{/ticket/submit}" th:object="${ticketRequest}" method="post" class="no-confirmation">
                     <div class="mb-3">
                         <label for="jiraTicket" class="form-label">Ticket Jira</label>
                         <input type="text" class="form-control" id="jiraTicket" th:field="*{jiraTicket}" required>

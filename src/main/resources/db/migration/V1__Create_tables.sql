@@ -37,17 +37,6 @@ CREATE TABLE job_logs (
     FOREIGN KEY (job_id) REFERENCES test_generation_jobs(id)
 );
 
-CREATE TABLE operation_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid TEXT NOT NULL UNIQUE,
-    operation TEXT NOT NULL,
-    timestamp TIMESTAMP NOT NULL,
-    job_uid TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL
-);
-
 CREATE INDEX idx_ticket_content_uid ON ticket_content(uid);
 CREATE INDEX idx_generated_test_uid ON generated_test(uid);
-CREATE INDEX idx_operation_log_uid ON operation_log(uid);
-CREATE INDEX idx_operation_log_job_uid ON operation_log(job_uid);
 CREATE INDEX idx_job_logs_job_id ON job_logs(job_id); 
