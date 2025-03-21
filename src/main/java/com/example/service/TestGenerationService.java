@@ -4,6 +4,7 @@ import com.example.agent.TicketAnalyzerAgent;
 import com.example.agent.TestGeneratorAgent;
 import com.example.agent.TestValidatorAgent;
 import com.example.agent.JiraTicketAnalyzerAgent;
+import com.example.config.TestGenerationProperties;
 import com.example.dto.TicketContentDto;
 import com.example.model.JobLog;
 import com.example.model.TestGenerationJob;
@@ -31,6 +32,7 @@ public class TestGenerationService {
     private final TestValidatorAgent testValidator;
     private final TestGenerationJobRepository testGenerationRepository;
     private final JobLogRepository jobLogRepository;
+    private final TestGenerationProperties properties;
 
     @Autowired
     public TestGenerationService(
@@ -39,12 +41,14 @@ public class TestGenerationService {
             TestValidatorAgent testValidator,
             TestGenerationJobRepository jobRepository,
             JobLogRepository jobLogRepository,
-            JiraTicketAnalyzerAgent jiraTicketAnalyzerAgent) {
+            JiraTicketAnalyzerAgent jiraTicketAnalyzerAgent,
+            TestGenerationProperties properties) {
         this.ticketAnalyzer = ticketAnalyzer;
         this.testGenerator = testGenerator;
         this.testValidator = testValidator;
         this.testGenerationRepository = jobRepository;
         this.jobLogRepository = jobLogRepository;
+        this.properties = properties;
     }
 
     @Async("taskExecutor")
@@ -106,14 +110,13 @@ public class TestGenerationService {
             String validationResults = null;
             boolean testsValidated = false;
             int attempts = 0;
-            final int MAX_ATTEMPTS = 3;
             
             // Tracciamento della qualità per ogni tentativo
             List<String> qualityHistory = new ArrayList<>();
             
-            while (!testsValidated && attempts < MAX_ATTEMPTS) {
+            while (!testsValidated && attempts < properties.getMaxAttempts()) {
                 attempts++;
-                addJobLog(job, "INFO", "Attempt " + attempts + " of " + MAX_ATTEMPTS);
+                addJobLog(job, "INFO", "Attempt " + attempts + " of " + properties.getMaxAttempts());
                 
                 String enhancedPrompt = "";
                 if (attempts > 1 && validationResults != null) {
@@ -138,10 +141,9 @@ public class TestGenerationService {
                 String overallQuality = extractOverallQuality(validationResults);
                 qualityHistory.add(overallQuality);
                 
-                testsValidated = overallQuality.equals("QUALITY_HIGH") || 
-                                overallQuality.equals("QUALITY_MEDIUM");
+                testsValidated = properties.getAcceptableQualityLevels().contains(overallQuality);
                 
-                if (!testsValidated && attempts < MAX_ATTEMPTS) {
+                if (!testsValidated && attempts < properties.getMaxAttempts()) {
                     addJobLog(job, "WARN", "Test quality is not sufficient, retrying...");
                     addJobLog(job, "INFO", "Current quality: " + overallQuality);
                 }
@@ -161,7 +163,7 @@ public class TestGenerationService {
                 
                 completeJob(job.getId());
             } else {
-                String errorMsg = "Test quality is not sufficient after " + MAX_ATTEMPTS + " attempts";
+                String errorMsg = "Test quality is not sufficient after " + properties.getMaxAttempts() + " attempts";
                 addJobLog(job, "ERROR", errorMsg);
                 addJobLog(job, "INFO", "Quality history: " + String.join(" → ", qualityHistory));
                 
