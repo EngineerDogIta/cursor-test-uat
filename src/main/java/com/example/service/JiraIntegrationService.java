@@ -18,6 +18,8 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.MDC;
+import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.commons.validator.routines.EmailValidator;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -56,10 +58,18 @@ public class JiraIntegrationService {
     
     public void testConnection(JiraCredentialsDto credentials) {
         try {
-            if (!credentials.getServerUrl().startsWith("http")) {
-                throw new RuntimeException("L'URL del server deve iniziare con http:// o https://");
+            // Validazione dell'URL utilizzando Apache Commons Validator
+            UrlValidator urlValidator = new UrlValidator(new String[]{"http", "https"});
+            if (!urlValidator.isValid(credentials.getServerUrl())) {
+                throw new RuntimeException("URL non valido. Deve iniziare con http:// o https:// ed essere corretta");
             }
-            
+
+            // Validazione dell'username come email utilizzando Apache Commons Validator
+            EmailValidator emailValidator = EmailValidator.getInstance();
+            if (!emailValidator.isValid(credentials.getUsername())) {
+                throw new RuntimeException("Username non è un indirizzo email valido");
+            }
+
             String url = credentials.getServerUrl().endsWith("/")
                 ? credentials.getServerUrl() + "rest/api/2/myself"
                 : credentials.getServerUrl() + "/rest/api/2/myself";

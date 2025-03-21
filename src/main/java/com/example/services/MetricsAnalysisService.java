@@ -124,7 +124,7 @@ public class MetricsAnalysisService {
         private String completeness = "";
         private String clarity = "";
         private String testData = "";
-        private java.util.List<String[]> issues = new java.util.ArrayList<>();
+        private final java.util.List<String[]> issues = new java.util.ArrayList<>();
 
         public boolean isMetricLow(String metric) {
             return metric != null && !metric.isEmpty() && metric.equals("QUALITY_LOW");
