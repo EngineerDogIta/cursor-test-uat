@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title>Dettaglio Job</title>
+    <title>Job Details</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         pre {
@@ -41,25 +41,27 @@
     <div class="container mt-4">
         <div class="row mb-4">
             <div class="col">
-                <h2>Dettaglio Job</h2>
+                <h2>Job Details</h2>
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Informazioni Job</h5>
+                        <h5 class="card-title">Job Information</h5>
                         <p><strong>ID:</strong> <span th:text="${job.id}"></span></p>
-                        <p><strong>Ticket Jira:</strong> <span th:text="${job.jiraTicket}"></span></p>
-                        <p><strong>Stato:</strong> 
-                            <span th:class="${job.status == 'IN_PROGRESS' ? 'badge bg-warning' : 
-                                            job.status == 'COMPLETED' ? 'badge bg-success' : 
-                                            'badge bg-danger'}"
+                        <p><strong>Jira Ticket:</strong> <span th:text="${job.jiraTicket}"></span></p>
+                        <p><strong>Status:</strong> 
+                            <span th:class="${job.status == 'IN_PROGRESS' ? 'badge bg-warning text-dark status-badge' : 
+                                            job.status == 'COMPLETED' ? 'badge bg-success text-white status-badge' : 
+                                            job.status == 'FAILED' ? 'badge bg-danger text-white status-badge' :
+                                            job.status == 'PENDING' ? 'badge bg-secondary text-white status-badge' :
+                                            'badge bg-info text-white status-badge'}"
                                   th:text="${job.status}"></span>
                         </p>
-                        <p><strong>Data Creazione:</strong> <span th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm:ss')}"></span></p>
+                        <p><strong>Creation Date:</strong> <span th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm:ss')}"></span></p>
                         <p th:if="${job.completedAt != null}">
-                            <strong>Data Completamento:</strong> 
+                            <strong>Completion Date:</strong> 
                             <span th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
                         </p>
                         <p th:if="${job.errorMessage != null}" class="text-danger">
-                            <strong>Errore:</strong> <span th:text="${job.errorMessage}"></span>
+                            <strong>Error:</strong> <span th:text="${job.errorMessage}"></span>
                         </p>
                     </div>
                 </div>
@@ -71,7 +73,7 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">Log del Job</h5>
+                        <h5 class="card-title mb-0">Job Logs</h5>
                     </div>
                     <div class="card-body">
                         <div class="log-container">
@@ -104,14 +106,14 @@
                                      th:text="${job.testResult}">
                                 </div>
                                 <div th:unless="${job.testResult != null and !job.testResult.isEmpty()}" class="alert alert-info">
-                                    I risultati dei test UAT non sono ancora disponibili.
+                                    UAT test results are not available yet.
                                 </div>
                             </div>
                         </div>
 
                         <!-- Messaggio di errore -->
                         <div th:if="${job.status == 'FAILED'}" class="alert alert-danger">
-                            <h6>Errore nella Generazione dei Test</h6>
+                            <h6>Error in Test Generation</h6>
                             <p th:text="${job.errorMessage}"></p>
                         </div>
                     </div>
@@ -122,11 +124,123 @@
 </div>
 
 <th:block layout:fragment="extra-js">
-    <script th:if="${job.status != 'FAILED' and job.status != 'COMPLETED'}">
-        // Aggiorna automaticamente la pagina ogni 5 secondi se il job non è fallito o completato
-        setTimeout(function() {
-            window.location.reload();
-        }, 5000);
+    <script th:inline="javascript">
+        const jobId = /*[[${job.id}]]*/ null;
+        const POLL_INTERVAL = 2000; // 2 secondi
+        let lastLogTimestamp = /*[[${job.logs != null && !job.logs.isEmpty() ? job.logs.get(0).timestamp.toString() : null}]]*/ null;
+        
+        function updateJobStatus(status) {
+            const statusElement = document.querySelector('.status-badge');
+            if (statusElement) {
+                statusElement.textContent = status;
+                
+                // Determina la classe del badge in base allo status
+                let badgeClass = 'badge status-badge';
+                switch(status) {
+                    case 'IN_PROGRESS':
+                        badgeClass += ' bg-warning text-dark';
+                        break;
+                    case 'COMPLETED':
+                        badgeClass += ' bg-success text-white';
+                        break;
+                    case 'FAILED':
+                        badgeClass += ' bg-danger text-white';
+                        break;
+                    case 'PENDING':
+                        badgeClass += ' bg-secondary text-white';
+                        break;
+                    default:
+                        badgeClass += ' bg-info text-white';
+                }
+                
+                statusElement.className = badgeClass;
+            }
+        }
+
+        function appendNewLogs(logs) {
+            const logContainer = document.querySelector('.log-container');
+            if (!logContainer) return;
+
+            logs.forEach(log => {
+                const logTimestamp = new Date(log.timestamp);
+                const lastTimestamp = lastLogTimestamp ? new Date(lastLogTimestamp) : null;
+                
+                // Aggiungi il log solo se è più recente dell'ultimo timestamp
+                if (!lastTimestamp || logTimestamp > lastTimestamp) {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'mb-2';
+                    
+                    // Formatta il timestamp in modo corretto
+                    const timeString = logTimestamp.toLocaleTimeString('it-IT', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    
+                    // Determina la classe del badge in base al livello
+                    const badgeClass = log.level === 'INFO' ? 'bg-info' :
+                                     log.level === 'WARNING' ? 'bg-warning' :
+                                     log.level === 'DEBUG' ? 'bg-secondary' :
+                                     'bg-danger';
+                    
+                    logEntry.innerHTML = `
+                        <span>${timeString}</span>
+                        <span class="badge ${badgeClass}">${log.level}</span>
+                        <span>${log.message}</span>
+                    `;
+                    
+                    // Inserisci il nuovo log all'inizio del container
+                    logContainer.insertBefore(logEntry, logContainer.firstChild);
+                    lastLogTimestamp = log.timestamp;
+                }
+            });
+        }
+
+        function updateTestResults(testResult) {
+            const testContainer = document.getElementById('test-result-content');
+            if (testContainer && testResult) {
+                testContainer.innerHTML = marked.parse(testResult);
+            }
+        }
+
+        function pollJobUpdates() {
+            Promise.all([
+                fetch(`/jobs/${jobId}/status`).then(r => r.json()),
+                fetch(`/jobs/${jobId}/logs`).then(r => r.json()),
+                fetch(`/jobs/${jobId}/test-result`).then(r => r.json())
+            ])
+            .then(([statusData, logsData, testResultData]) => {
+                // Aggiorna stato
+                if (statusData.status) {
+                    updateJobStatus(statusData.status);
+                }
+                
+                // Aggiorna logs
+                if (logsData && Array.isArray(logsData)) {
+                    appendNewLogs(logsData);
+                }
+                
+                // Aggiorna risultati test
+                if (testResultData && testResultData.testResult) {
+                    updateTestResults(testResultData.testResult);
+                }
+                
+                // Continua il polling se il job è ancora in corso
+                if (statusData.status === 'IN_PROGRESS') {
+                    setTimeout(pollJobUpdates, POLL_INTERVAL);
+                }
+            })
+            .catch(error => {
+                console.error('Errore nell\'aggiornamento:', error);
+                // Riprova dopo un errore
+                setTimeout(pollJobUpdates, POLL_INTERVAL);
+            });
+        }
+
+        // Avvia il polling solo se il job è in corso
+        if (/*[[${job.status}]]*/ 'IN_PROGRESS' === 'IN_PROGRESS') {
+            pollJobUpdates();
+        }
     </script>
     <script>
         // Configura marked per il rendering del markdown

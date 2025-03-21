@@ -3,6 +3,9 @@
       layout:decorate="~{layout/main}">
 <head>
     <title>Dashboard - Test Generation System</title>
+    <th:block layout:fragment="extra-css">
+        <link th:href="@{/css/dashboard.css}" rel="stylesheet">
+    </th:block>
 </head>
 <body>
     <div layout:fragment="content">
@@ -29,7 +32,7 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Ticket Jira</th>
+                                <th>Jira Ticket</th>
                                 <th>Status</th>
                                 <th>Creation Date</th>
                                 <th>Actions</th>
@@ -40,9 +43,11 @@
                                 <td th:text="${job.id}"></td>
                                 <td th:text="${job.jiraTicket}"></td>
                                 <td>
-                                    <span th:class="${job.status == 'IN_PROGRESS' ? 'badge bg-warning' : 
-                                                    job.status == 'COMPLETED' ? 'badge bg-success' : 
-                                                    'badge bg-danger'}"
+                                    <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
+                                                   'badge bg-info text-white status-badge'}"
                                           th:text="${job.status}"></span>
                                 </td>
                                 <td th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
@@ -69,7 +74,7 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Ticket Jira</th>
+                                <th>Jira Ticket</th>
                                 <th>Status</th>
                                 <th>Completion Date</th>
                                 <th>Actions</th>
@@ -80,7 +85,11 @@
                                 <td th:text="${job.id}"></td>
                                 <td th:text="${job.jiraTicket}"></td>
                                 <td>
-                                    <span th:class="${job.status == 'COMPLETED' ? 'badge bg-success' : 'badge bg-danger'}"
+                                    <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
+                                                   'badge bg-info text-white status-badge'}"
                                           th:text="${job.status}"></span>
                                 </td>
                                 <td th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}"></td>

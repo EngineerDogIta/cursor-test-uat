@@ -24,11 +24,11 @@
                         <a class="nav-link" th:href="@{/}" th:classappend="${currentUri == '/' ? 'active' : ''}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/ticket-form}" th:classappend="${currentUri == '/ticket-form' ? 'active' : ''}">Nuovo Ticket</a>
+                        <a class="nav-link" th:href="@{/ticket-form}" th:classappend="${currentUri == '/ticket-form' ? 'active' : ''}">New Ticket</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" th:href="@{/jira/connections}" th:classappend="${currentUri.startsWith('/jira') ? 'active' : ''}">
-                            <i class="bi bi-link"></i> Jira
+                            <i class="bi bi-link"></i> Import Jira
                         </a>
                     </li>
                 </ul>

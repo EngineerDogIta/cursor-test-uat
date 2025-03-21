@@ -1,0 +1,30 @@
+.status-badge {
+    padding: 0.5em 1em;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.status-badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.status-badge.bg-success {
+    background-color: #28a745 !important;
+    color: #fff !important;
+}
+
+.status-badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+.status-badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+
+.status-badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: #fff !important;
+} 

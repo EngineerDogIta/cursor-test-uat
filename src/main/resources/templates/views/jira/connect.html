@@ -2,14 +2,14 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title>Connessione a Jira - Test Generation System</title>
+    <title>Jira Connection - Test Generation System</title>
 </head>
 <body>
     <div layout:fragment="content">
         <div class="row mb-4">
             <div class="col">
-                <h2>Connessione a Jira</h2>
-                <p class="text-muted">Configura la connessione al tuo server Jira</p>
+                <h2>Jira Connection</h2>
+                <p class="text-muted">Configure the connection to your Jira server</p>
             </div>
             <div class="col text-end">
                 <a th:href="@{/}" class="btn btn-secondary">
@@ -24,28 +24,28 @@
                 
                 <form th:action="@{/jira/connect}" th:object="${credentials}" method="post">
                     <div class="mb-3">
-                        <label for="serverUrl" class="form-label">URL del server Jira</label>
+                        <label for="serverUrl" class="form-label">Jira server URL</label>
                         <input type="text" class="form-control" id="serverUrl" th:field="*{serverUrl}" required
                                placeholder="https://tua-azienda.atlassian.net"/>
-                        <div class="form-text">Inserisci l'URL completo del tuo server Jira.</div>
+                        <div class="form-text">Enter the complete URL of your Jira server.</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="username" class="form-label">Nome utente</label>
+                        <label for="username" class="form-label">Username</label>
                         <input type="text" class="form-control" id="username" th:field="*{username}" required
                                placeholder="nome.cognome@azienda.com"/>
-                        <div class="form-text">Generalmente è il tuo indirizzo email.</div>
+                        <div class="form-text">Usually it's your email address.</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="apiToken" class="form-label">Token API</label>
+                        <label for="apiToken" class="form-label">API Token</label>
                         <input type="password" class="form-control" id="apiToken" th:field="*{apiToken}" required/>
-                        <div class="form-text">Puoi generare un token API nelle impostazioni del tuo account Atlassian.</div>
+                        <div class="form-text">You can generate an API token in your Atlassian account settings.</div>
                     </div>
                     
                     <div class="d-flex">
-                        <button type="submit" class="btn btn-primary me-2">Connetti</button>
-                        <button type="button" id="testConnection" class="btn btn-outline-secondary">Testa connessione</button>
+                        <button type="submit" class="btn btn-primary me-2">Connect</button>
+                        <button type="button" id="testConnection" class="btn btn-outline-secondary">Test connection</button>
                     </div>
                 </form>
             </div>

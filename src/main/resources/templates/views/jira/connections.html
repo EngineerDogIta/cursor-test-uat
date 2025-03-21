@@ -2,18 +2,18 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title>Connessioni Jira - Test Generation System</title>
+    <title>Jira Connections - Test Generation System</title>
 </head>
 <body>
     <div layout:fragment="content">
         <div class="row mb-4">
             <div class="col">
-                <h2>Connessioni Jira</h2>
-                <p class="text-muted">Gestisci le tue connessioni a Jira</p>
+                <h2>Jira Connections</h2>
+                <p class="text-muted">Manage your Jira connections</p>
             </div>
             <div class="col text-end">
                 <a th:href="@{/jira/connect}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Nuova Connessione
+                    <i class="bi bi-plus-circle"></i> New Connection
                 </a>
             </div>
         </div>
@@ -21,7 +21,7 @@
         <div class="card">
             <div class="card-body">
                 <div th:if="${connections.empty}" class="alert alert-info">
-                    Non hai ancora configurato connessioni a Jira. Crea una nuova connessione per iniziare.
+                    You haven't configured Jira connections yet. Create a new connection to start.
                 </div>
                 
                 <div th:if="${not connections.empty}" class="table-responsive">
@@ -29,10 +29,10 @@
                         <thead>
                             <tr>
                                 <th>Server</th>
-                                <th>Nome utente</th>
-                                <th>Data creazione</th>
-                                <th>Ultimo utilizzo</th>
-                                <th>Azioni</th>
+                                <th>Username</th>
+                                <th>Creation date</th>
+                                <th>Last used</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -40,9 +40,9 @@
                                 <td th:text="${conn.serverUrl}"></td>
                                 <td th:text="${conn.username}"></td>
                                 <td th:text="${#temporals.format(conn.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
-                                <td th:text="${conn.lastUsedAt != null ? #temporals.format(conn.lastUsedAt, 'dd/MM/yyyy HH:mm') : 'Mai utilizzata'}"></td>
+                                <td th:text="${conn.lastUsedAt != null ? #temporals.format(conn.lastUsedAt, 'dd/MM/yyyy HH:mm') : 'Never used'}"></td>
                                 <td>
-                                    <a th:href="@{/jira/search(connectionId=${conn.id})}" class="btn btn-sm btn-primary">Cerca Ticket</a>
+                                    <a th:href="@{/jira/search(connectionId=${conn.id})}" class="btn btn-sm btn-primary">Search Tickets</a>
                                 </td>
                             </tr>
                         </tbody>
