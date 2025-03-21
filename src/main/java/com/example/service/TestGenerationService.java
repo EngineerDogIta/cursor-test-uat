@@ -19,6 +19,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Service
 public class TestGenerationService {
     
@@ -67,15 +70,27 @@ public class TestGenerationService {
         }
     }
 
-    @Async
+    @Async("taskExecutor")
     protected void processTestGeneration(Long jobId, TicketContentDto ticketDto, Long jobUid) {
         try {
             TestGenerationJob job = testGenerationRepository.findById(jobUid).orElseThrow();
             
             // 1. Analizza il ticket
             addJobLog(job, "INFO", "Inizio analisi del ticket");
-            addJobLog(job, "DEBUG", "Contenuto del ticket: " + ticketDto.getContent());
-            String ticketAnalysis = ticketAnalyzer.analyzeTicket(ticketDto);
+            String ticketAnalysis;
+            
+            if (ticketDto != null) {
+                addJobLog(job, "DEBUG", "Contenuto del ticket: " + ticketDto.getContent());
+                ticketAnalysis = ticketAnalyzer.analyzeTicket(ticketDto);
+            } else {
+                // Se non abbiamo il ticketDto, lo creiamo dai dati del job
+                List<String> components = job.getComponents() != null && !job.getComponents().isEmpty() 
+                    ? List.of(job.getComponents().split("\\s+")) 
+                    : List.of();
+                TicketContentDto jobTicketDto = new TicketContentDto(job.getDescription(), job.getJiraTicket(), components);
+                ticketAnalysis = ticketAnalyzer.analyzeTicket(jobTicketDto);
+            }
+            
             addJobLog(job, "INFO", "Analisi del ticket completata");
             addJobLog(job, "DEBUG", "Risultato analisi: " + ticketAnalysis);
             
@@ -95,8 +110,16 @@ public class TestGenerationService {
                 attempts++;
                 addJobLog(job, "INFO", "Tentativo " + attempts + " di " + MAX_ATTEMPTS);
                 
+                String enhancedPrompt = "";
+                if (attempts > 1 && validationResults != null) {
+                    // Analizza i risultati precedenti per migliorare il prompt
+                    enhancedPrompt = analyzeValidationAndEnhancePrompt(validationResults);
+                    addJobLog(job, "INFO", "Prompt migliorato in base alla validazione precedente");
+                    addJobLog(job, "DEBUG", "Prompt migliorato: " + enhancedPrompt);
+                }
+                
                 addJobLog(job, "INFO", "Inizio generazione dei test");
-                generatedTests = testGenerator.generateTests(ticketAnalysis);
+                generatedTests = testGenerator.generateTests(ticketAnalysis, enhancedPrompt);
                 addJobLog(job, "INFO", "Generazione dei test completata");
                 addJobLog(job, "DEBUG", "Test generati: " + generatedTests);
                 
@@ -106,8 +129,8 @@ public class TestGenerationService {
                 addJobLog(job, "INFO", "Validazione dei test completata");
                 addJobLog(job, "DEBUG", "Risultati validazione: " + validationResults);
                 
-                testsValidated = validationResults.contains("\"overallQuality\":\"HIGH\"") || 
-                                validationResults.contains("\"overallQuality\":\"MEDIUM\"");
+                testsValidated = validationResults.contains("OVERALL_QUALITY: QUALITY_HIGH") || 
+                                validationResults.contains("OVERALL_QUALITY: QUALITY_MEDIUM");
                 
                 if (!testsValidated && attempts < MAX_ATTEMPTS) {
                     addJobLog(job, "WARN", "La qualità dei test non è sufficiente, nuovo tentativo...");
@@ -189,7 +212,7 @@ public class TestGenerationService {
         
         // Avvia l'elaborazione in modo asincrono solo dopo che il job è stato salvato
         try {
-            processJobAsync(job.getId());
+            processTestGeneration(job.getId(), null, job.getId());
         } catch (Exception e) {
             logger.error("Errore nell'avvio del processo asincrono per il job {}: {}", job.getId(), e.getMessage());
             // Aggiorna lo stato del job in caso di errore
@@ -200,70 +223,6 @@ public class TestGenerationService {
         }
         
         return job;
-    }
-
-    @Async("taskExecutor")
-    protected void processJobAsync(Long jobId) {
-        try {
-            TestGenerationJob job = getJob(jobId);
-            
-            // Aggiorna lo stato a IN_PROGRESS
-            job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
-            testGenerationRepository.save(job);
-            
-            // 1. Analisi del ticket
-            addJobLog(job, "INFO", "Inizio analisi del ticket Jira: " + job.getJiraTicket());
-            List<String> components = job.getComponents() != null && !job.getComponents().isEmpty() 
-                ? List.of(job.getComponents().split("\\s+")) 
-                : List.of();
-            TicketContentDto ticketDto = new TicketContentDto(job.getDescription(), job.getJiraTicket(), components);
-            String ticketAnalysis = ticketAnalyzer.analyzeTicket(ticketDto);
-            addJobLog(job, "INFO", "Analisi del ticket completata con successo");
-            
-            // 2. Generazione dei test
-            addJobLog(job, "INFO", "Inizio generazione dei test");
-            String generatedTests = null;
-            String validationResults = null;
-            boolean testsValidated = false;
-            int attempts = 0;
-            final int MAX_ATTEMPTS = 3;
-            
-            while (!testsValidated && attempts < MAX_ATTEMPTS) {
-                attempts++;
-                addJobLog(job, "INFO", "Tentativo " + attempts + " di " + MAX_ATTEMPTS);
-                
-                generatedTests = testGenerator.generateTests(ticketAnalysis);
-                addJobLog(job, "INFO", "Generazione dei test completata");
-                
-                // 3. Validazione dei test
-                addJobLog(job, "INFO", "Inizio validazione dei test");
-                validationResults = testValidator.validateTests(ticketAnalysis, generatedTests);
-                addJobLog(job, "INFO", "Validazione dei test completata");
-                
-                testsValidated = validationResults.contains("\"overallQuality\":\"HIGH\"") || 
-                                validationResults.contains("\"overallQuality\":\"MEDIUM\"");
-                
-                if (!testsValidated && attempts < MAX_ATTEMPTS) {
-                    addJobLog(job, "INFO", "La qualità dei test non è sufficiente, nuovo tentativo...");
-                }
-            }
-            
-            // 4. Verifica della qualità finale
-            if (testsValidated) {
-                addJobLog(job, "INFO", "Test validati con successo");
-                completeJob(job.getId());
-            } else {
-                throw new RuntimeException("La qualità dei test generati non è sufficiente dopo " + MAX_ATTEMPTS + " tentativi");
-            }
-            
-        } catch (Exception e) {
-            logger.error("Error processing job: " + jobId, e);
-            TestGenerationJob job = getJob(jobId);
-            job.setStatus(TestGenerationJob.JobStatus.FAILED);
-            job.setErrorMessage(e.getMessage());
-            job.setCompletedAt(LocalDateTime.now());
-            testGenerationRepository.save(job);
-        }
     }
 
     private void completeJob(Long jobId) {
@@ -301,6 +260,45 @@ public class TestGenerationService {
             logger.error("Errore durante l'aggiunta del log per il job {}: {}", job.getId(), e.getMessage());
             // Fallback: logga solo nel logger di sistema
             logger.info("[JOB_{}] {} - {}", job.getId(), level, message);
+        }
+    }
+
+    private String analyzeValidationAndEnhancePrompt(String validationResults) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode validation = mapper.readTree(validationResults);
+            
+            StringBuilder enhancedInstructions = new StringBuilder();
+            enhancedInstructions.append("\nMiglioramenti richiesti basati sulla validazione precedente:\n");
+            
+            // Analizza i problemi identificati
+            JsonNode issues = validation.path("issues");
+            for (JsonNode issue : issues) {
+                String type = issue.path("type").asText();
+                String description = issue.path("description").asText();
+                String suggestion = issue.path("suggestion").asText();
+                
+                enhancedInstructions.append(String.format(
+                    "- Migliora %s: %s. Suggerimento: %s\n",
+                    type.toLowerCase(),
+                    description,
+                    suggestion
+                ));
+            }
+            
+            // Incorpora le raccomandazioni
+            JsonNode recommendations = validation.path("recommendations");
+            if (recommendations.isArray() && recommendations.size() > 0) {
+                enhancedInstructions.append("\nRaccomandazioni specifiche:\n");
+                for (JsonNode rec : recommendations) {
+                    enhancedInstructions.append("- ").append(rec.asText()).append("\n");
+                }
+            }
+            
+            return enhancedInstructions.toString();
+        } catch (Exception e) {
+            logger.error("Errore nell'analisi dei risultati della validazione", e);
+            return "";
         }
     }
 } 

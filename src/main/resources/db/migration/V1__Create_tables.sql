@@ -23,7 +23,6 @@ CREATE TABLE test_generation_jobs (
     components TEXT,
     status TEXT NOT NULL CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED')),
     error_message TEXT,
-    branch_name TEXT,
     created_at TIMESTAMP NOT NULL,
     completed_at TIMESTAMP
 );

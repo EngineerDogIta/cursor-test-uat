@@ -34,9 +34,6 @@ public class TestGenerationJob {
     @Column
     private String errorMessage;
 
-    @Column(name = "branch_name")
-    private String branchName;
-
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

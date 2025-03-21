@@ -12,44 +12,28 @@ public class TestGeneratorAgent {
     private static final Logger logger = LoggerFactory.getLogger(TestGeneratorAgent.class);
     private final ChatClient chatClient;
     private static final String SYSTEM_PROMPT = """
-        Sei un agente specializzato nella generazione di casi di test UAT.
-        Il tuo compito è generare scenari di test dettagliati basati sull'analisi del ticket.
+        Generate UAT test cases from ticket analysis.
         
-        Per ogni scenario, genera:
-        1. Scenari positivi
-        2. Scenari limite
-        3. Scenari negativi
+        For each important scenario create:
+        - Positive test
+        - Boundary test
+        - Negative test
         
-        Ogni scenario deve includere:
-        - Precondizioni
-        - Steps dettagliati
-        - Risultati attesi
-        - Dati di test
-        - Dipendenze
-        - Validazione automatizzata (se possibile)
+        Format:
         
-        Fornisci l'output in formato JSON con la seguente struttura:
-        {
-            "scenarios": [
-                {
-                    "id": "SCENARIO_ID",
-                    "title": "Titolo dello scenario",
-                    "type": "POSITIVE/NEGATIVE/BOUNDARY",
-                    "preconditions": ["precondizione1", "precondizione2"],
-                    "steps": [
-                        {
-                            "stepNumber": 1,
-                            "description": "descrizione dello step",
-                            "expectedResult": "risultato atteso"
-                        }
-                    ],
-                    "expectedResults": ["risultato1", "risultato2"],
-                    "testData": ["dato1", "dato2"],
-                    "dependencies": ["dipendenza1", "dipendenza2"],
-                    "automatedValidation": "descrizione della validazione"
-                }
-            ]
-        }
+        ## SCENARIO: [ID] - [Title]
+        **Type:** [POSITIVE/NEGATIVE/BOUNDARY]
+        
+        **Preconditions:**
+        * [list key preconditions]
+        
+        **Steps:**
+        1. [step] - Expected: [result]
+        2. [step] - Expected: [result]
+        
+        **Test Data:** [key test data]
+        **Dependencies:** [if any]
+        **Automation:** [validation approach if possible]
         """;
 
     @Autowired
@@ -58,11 +42,15 @@ public class TestGeneratorAgent {
     }
 
     public String generateTests(String ticketAnalysis) {
+        return generateTests(ticketAnalysis, SYSTEM_PROMPT);
+    }
+
+    public String generateTests(String ticketAnalysis, String enhancedPrompt) {
         logger.info("Starting test generation");
         logger.debug("Using ticket analysis: {}", ticketAnalysis);
         
         try {
-            Prompt prompt = new Prompt(SYSTEM_PROMPT + "\n\nAnalisi del ticket:\n" + ticketAnalysis);
+            Prompt prompt = new Prompt(enhancedPrompt + "\n\nAnalisi del ticket:\n" + ticketAnalysis);
             String result = chatClient.call(prompt).getResult().getOutput().getContent();
             
             logger.info("Test generation completed successfully");

@@ -12,36 +12,24 @@ public class TestValidatorAgent {
     private static final Logger logger = LoggerFactory.getLogger(TestValidatorAgent.class);
     private final ChatClient chatClient;
     private static final String SYSTEM_PROMPT = """
-        Sei un agente specializzato nella validazione della qualità dei casi di test UAT.
-        Il tuo compito è verificare:
-        1. Coerenza tra analisi del ticket e scenari generati
-        2. Completezza degli scenari (positivi, negativi, limite)
-        3. Chiarezza e dettaglio degli steps
-        4. Validità dei dati di test
-        5. Copertura delle dipendenze
-        6. Possibilità di automazione
+        Validate UAT test cases quality. Use ONLY these exact keywords in responses:
+        QUALITY_HIGH, QUALITY_MEDIUM, QUALITY_LOW
+        SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW
         
-        Fornisci l'output in formato JSON con la seguente struttura:
-        {
-            "validationResults": {
-                "coherence": "HIGH/MEDIUM/LOW",
-                "completeness": "HIGH/MEDIUM/LOW",
-                "clarity": "HIGH/MEDIUM/LOW",
-                "testDataQuality": "HIGH/MEDIUM/LOW",
-                "dependenciesCoverage": "HIGH/MEDIUM/LOW",
-                "automationPotential": "HIGH/MEDIUM/LOW"
-            },
-            "issues": [
-                {
-                    "type": "COHERENCE/COMPLETENESS/CLARITY/DATA/DEPENDENCIES/AUTOMATION",
-                    "description": "descrizione del problema",
-                    "severity": "HIGH/MEDIUM/LOW",
-                    "suggestion": "suggerimento di miglioramento"
-                }
-            ],
-            "overallQuality": "HIGH/MEDIUM/LOW",
-            "recommendations": ["raccomandazione1", "raccomandazione2"]
-        }
+        Format response exactly as:
+        
+        OVERALL_QUALITY: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
+        
+        METRICS:
+        - Coherence: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
+        - Completeness: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
+        - Clarity: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
+        - TestData: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
+        
+        ISSUES:
+        1. Type: [issue] 
+           Severity: [SEVERITY_HIGH|SEVERITY_MEDIUM|SEVERITY_LOW]
+           Fix: [suggestion]
         """;
 
     @Autowired
@@ -87,41 +75,23 @@ public class TestValidatorAgent {
         
         try {
             String validationPrompt = """
-                Esegui una validazione tecnica approfondita dei test generati rispetto all'analisi del ticket.
-                Considera:
-                1. Copertura degli scenari critici
-                2. Validità dei dati di test
-                3. Gestione degli errori
-                4. Performance e scalabilità
-                5. Sicurezza e privacy
-                6. Manutenibilità dei test
+                Perform technical validation using ONLY these keywords:
+                TECH_HIGH, TECH_MEDIUM, TECH_LOW
+                RISK_HIGH, RISK_MEDIUM, RISK_LOW
                 
-                Analisi del ticket:
-                %s
+                Format response exactly as:
                 
-                Test da validare:
-                %s
+                TECHNICAL_SCORE: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
                 
-                Fornisci l'output in formato JSON con la seguente struttura:
-                {
-                    "technicalValidation": {
-                        "criticalScenariosCoverage": "HIGH/MEDIUM/LOW",
-                        "testDataValidity": "HIGH/MEDIUM/LOW",
-                        "errorHandling": "HIGH/MEDIUM/LOW",
-                        "performanceConsiderations": "HIGH/MEDIUM/LOW",
-                        "securityCompliance": "HIGH/MEDIUM/LOW",
-                        "maintainability": "HIGH/MEDIUM/LOW"
-                    },
-                    "technicalIssues": [
-                        {
-                            "category": "SCENARIOS/DATA/ERRORS/PERFORMANCE/SECURITY/MAINTENANCE",
-                            "description": "descrizione del problema tecnico",
-                            "severity": "HIGH/MEDIUM/LOW",
-                            "technicalSuggestion": "suggerimento tecnico di miglioramento"
-                        }
-                    ],
-                    "technicalRecommendations": ["raccomandazione tecnica 1", "raccomandazione tecnica 2"]
-                }
+                ASPECTS:
+                - Coverage: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
+                - ErrorHandling: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
+                - Security: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
+                
+                RISKS:
+                1. Area: [risk area]
+                   Level: [RISK_HIGH|RISK_MEDIUM|RISK_LOW]
+                   Action: [mitigation]
                 """.formatted(ticketAnalysis, generatedTests);
             
             Prompt prompt = new Prompt(validationPrompt);

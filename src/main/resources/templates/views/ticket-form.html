@@ -2,18 +2,18 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title>Nuovo Ticket - Test Generation System</title>
+    <title>New Ticket - Test Generation System</title>
 </head>
 <body>
     <div layout:fragment="content">
         <div class="row mb-4">
             <div class="col">
-                <h2>Nuovo Ticket</h2>
-                <p class="text-muted">Inserisci i dettagli del ticket Jira per la generazione dei test</p>
+                <h2>New Ticket</h2>
+                <p class="text-muted">Enter the Jira ticket details for test generation</p>
             </div>
             <div class="col text-end">
                 <a th:href="@{/}" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
                 </a>
             </div>
         </div>
@@ -22,27 +22,27 @@
             <div class="card-body">
                 <form th:action="@{/ticket/submit}" th:object="${ticketRequest}" method="post">
                     <div class="mb-3">
-                        <label for="ticketId" class="form-label">Ticket Jira</label>
+                        <label for="ticketId" class="form-label">Jira Ticket</label>
                         <input type="text" class="form-control" id="ticketId" th:field="*{ticketId}" required>
-                        <div class="form-text">Inserisci l'ID del ticket Jira (es. PROJ-123)</div>
+                        <div class="form-text">Enter the Jira ticket ID (e.g., PROJ-123)</div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="content" class="form-label">Descrizione</label>
+                        <label for="content" class="form-label">Description</label>
                         <textarea class="form-control" id="content" th:field="*{content}" rows="3"></textarea>
-                        <div class="form-text">Inserisci una descrizione opzionale del ticket</div>
+                        <div class="form-text">Enter an optional description of the ticket</div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="components" class="form-label">Componenti</label>
+                        <label for="components" class="form-label">Components</label>
                         <input type="text" class="form-control" id="components" th:field="*{components}" 
-                               placeholder="Inserisci i componenti separati da spazi (es. frontend backend database)">
-                        <div class="form-text">Inserisci i componenti coinvolti nel ticket, separati da spazi. Usa underscore per parole multiple (es. user_management)</div>
+                               placeholder="Enter the components involved in the ticket, separated by spaces. Use underscores for multiple words (e.g., user_management)">
+                        <div class="form-text">Enter the components involved in the ticket, separated by spaces. Use underscores for multiple words (e.g., user_management)</div>
                     </div>
 
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-send"></i> Invia Ticket
+                            <i class="bi bi-send"></i> Submit Ticket
                         </button>
                     </div>
                 </form>
