@@ -1,16 +1,12 @@
 package com.example.service;
 
-import com.example.agent.TicketAnalyzerAgent;
 import com.example.agent.TestGeneratorAgent;
 import com.example.agent.TestValidatorAgent;
 import com.example.agent.ITicketAnalyzer;
-import com.example.agent.JiraTicketAnalyzerAgent;
 import com.example.config.TestGenerationProperties;
 import com.example.dto.TicketContentDto;
-import com.example.model.JobLog;
 import com.example.model.TestGenerationJob;
 import com.example.repository.TestGenerationJobRepository;
-import com.example.repository.JobLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 
 @Service
 public class TestGenerationService {

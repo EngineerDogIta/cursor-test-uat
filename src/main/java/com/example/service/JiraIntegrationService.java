@@ -1,8 +1,5 @@
 package com.example.service;
 
-import com.example.agent.JiraTicketAnalyzerAgent;
-import com.example.agent.TestGeneratorAgent;
-import com.example.agent.TestValidatorAgent;
 import com.example.dto.*;
 import com.example.exception.TicketAnalysisException;
 import com.example.model.JiraConnection;
@@ -138,9 +135,12 @@ public class JiraIntegrationService {
                 throw new TicketAnalysisException("Errore nella ricerca dei ticket");
             }
             
-            List<TicketContentDto> results = response.getBody().getIssues().stream()
-                .map(this::convertToTicketDto)
-                .collect(java.util.stream.Collectors.toList());
+            JiraSearchResponseDto searchResponse = response.getBody();
+            List<TicketContentDto> results = searchResponse != null && searchResponse.getIssues() != null ? 
+                searchResponse.getIssues().stream()
+                    .map(this::convertToTicketDto)
+                    .collect(java.util.stream.Collectors.toList()) : 
+                Collections.emptyList();
                 
             logger.info("Ricerca completata con successo - {} ticket trovati", results.size());
             return results;

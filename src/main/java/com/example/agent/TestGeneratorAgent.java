@@ -54,7 +54,7 @@ public class TestGeneratorAgent {
         String promptToUse = SYSTEM_PROMPT + (enhancedPrompt != null && !enhancedPrompt.isEmpty() ? "\n\n" + enhancedPrompt : "");
         logger.info("Starting test generation for ticket analysis");
         logger.debug("Input ticket analysis length: {} characters", ticketAnalysis.length());
-        logger.debug("Enhanced prompt length: {} characters", enhancedPrompt.length());
+        logger.debug("Enhanced prompt length: {} characters", enhancedPrompt != null ? enhancedPrompt.length() : 0);
         
         try {
             // Extract ticket information from analysis
