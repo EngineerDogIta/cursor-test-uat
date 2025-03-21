@@ -65,13 +65,21 @@ public class TicketAnalyzerAgent {
             
             // Combiniamo i risultati
             String combinedAnalysis = String.format("""
-                {
-                    "ticketId": "%s",
-                    "components": ["%s"],
-                    "baseAnalysis": %s,
-                    "detailedAnalysis": %s
-                }
-                """, ticketDto.getTicketId(), String.join("\", \"", ticketDto.getComponents()), baseAnalysis, detailedAnalysis);
+                # Analisi Completa Ticket %s
+                
+                ## Componenti
+                %s
+                
+                ## Analisi Base
+                %s
+                
+                ## Analisi Dettagliata
+                %s
+                """, 
+                ticketDto.getTicketId(), 
+                String.join("\n", ticketDto.getComponents()),
+                baseAnalysis,
+                detailedAnalysis);
             
             logger.info("Ticket analysis completed successfully");
             logger.debug("Combined analysis result: {}", combinedAnalysis);

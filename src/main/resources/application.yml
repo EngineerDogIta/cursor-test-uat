@@ -32,10 +32,32 @@ spring:
           type: linear
           factor: 2.0
   datasource:
-    url: jdbc:sqlite:data/test_generation.db
+    url: jdbc:sqlite:data/test_generation.db?journal_mode=WAL&foreign_keys=on
     driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+      minimum-idle: 1
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      auto-commit: false
+      pool-name: SQLiteHikariCP
+      validation-timeout: 5000
+      leak-detection-threshold: 60000
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.community.dialect.SQLiteDialect
+        connection:
+          provider_disables_autocommit: true
+        jdbc:
+          batch_size: 30
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+        format_sql: true
 
 server:
   port: 8080
@@ -43,4 +65,7 @@ server:
 logging:
   level:
     com.example: INFO
+    com.zaxxer.hikari: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
  

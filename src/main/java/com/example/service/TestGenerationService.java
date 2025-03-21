@@ -15,14 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Isolation;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class TestGenerationService {
@@ -34,7 +30,6 @@ public class TestGenerationService {
     private final TestValidatorAgent testValidator;
     private final TestGenerationJobRepository testGenerationRepository;
     private final JobLogRepository jobLogRepository;
-    private final JiraTicketAnalyzerAgent jiraTicketAnalyzerAgent;
 
     @Autowired
     public TestGenerationService(
@@ -49,7 +44,6 @@ public class TestGenerationService {
         this.testValidator = testValidator;
         this.testGenerationRepository = jobRepository;
         this.jobLogRepository = jobLogRepository;
-        this.jiraTicketAnalyzerAgent = jiraTicketAnalyzerAgent;
     }
 
     @Async("taskExecutor")
@@ -268,13 +262,14 @@ public class TestGenerationService {
             JobLog log = new JobLog();
             log.setJob(job);
             log.setLevel(level);
-            log.setMessage(message);
+            // Limita il messaggio a 150 caratteri
+            log.setMessage(message.length() > 150 ? message.substring(0, 150) + "..." : message);
             log.setTimestamp(LocalDateTime.now());
             
             // Salva solo il log, non è necessario aggiornare il job
             jobLogRepository.save(log);
             
-            logger.debug("Log aggiunto con successo per il job {}: {} - {}", job.getId(), level, message);
+            logger.debug("Log aggiunto con successo per il job {}: {} - {}", job.getId(), level, log.getMessage());
         } catch (Exception e) {
             logger.error("Errore durante l'aggiunta del log per il job {}: {}", job.getId(), e.getMessage());
             // Fallback: logga solo nel logger di sistema
@@ -284,36 +279,71 @@ public class TestGenerationService {
 
     private String analyzeValidationAndEnhancePrompt(String validationResults) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode validation = mapper.readTree(validationResults);
-            
             StringBuilder enhancedInstructions = new StringBuilder();
             enhancedInstructions.append("\nMiglioramenti richiesti basati sulla validazione precedente:\n");
             
-            // Analizza i problemi identificati
-            JsonNode issues = validation.path("issues");
-            for (JsonNode issue : issues) {
-                String type = issue.path("type").asText();
-                String description = issue.path("description").asText();
-                String suggestion = issue.path("suggestion").asText();
-                
-                enhancedInstructions.append(String.format(
-                    "- Migliora %s: %s. Suggerimento: %s\n",
-                    type.toLowerCase(),
-                    description,
-                    suggestion
-                ));
+            // Estrai le metriche
+            String coherence = "";
+            String completeness = "";
+            String clarity = "";
+            String testData = "";
+            
+            if (validationResults.contains("Coherence:")) {
+                coherence = validationResults.split("Coherence:")[1].split("\n")[0].trim();
+            }
+            if (validationResults.contains("Completeness:")) {
+                completeness = validationResults.split("Completeness:")[1].split("\n")[0].trim();
+            }
+            if (validationResults.contains("Clarity:")) {
+                clarity = validationResults.split("Clarity:")[1].split("\n")[0].trim();
+            }
+            if (validationResults.contains("TestData:")) {
+                testData = validationResults.split("TestData:")[1].split("\n")[0].trim();
             }
             
-            // Incorpora le raccomandazioni
-            JsonNode recommendations = validation.path("recommendations");
-            if (recommendations.isArray() && recommendations.size() > 0) {
-                enhancedInstructions.append("\nRaccomandazioni specifiche:\n");
-                for (JsonNode rec : recommendations) {
-                    enhancedInstructions.append("- ").append(rec.asText()).append("\n");
+            // Aggiungi suggerimenti basati sulle metriche
+            if (coherence.equals("QUALITY_LOW")) {
+                enhancedInstructions.append("- Migliora la coerenza dei test: assicurati che i test siano allineati con i requisiti del ticket\n");
+            }
+            if (completeness.equals("QUALITY_LOW")) {
+                enhancedInstructions.append("- Migliora la completezza: aggiungi test per scenari mancanti\n");
+            }
+            if (clarity.equals("QUALITY_LOW")) {
+                enhancedInstructions.append("- Migliora la chiarezza: rendi i test più leggibili e comprensibili\n");
+            }
+            if (testData.equals("QUALITY_LOW")) {
+                enhancedInstructions.append("- Migliora i dati di test: fornisci dati di test più specifici e realistici\n");
+            }
+            
+            // Estrai e aggiungi i problemi specifici
+            if (validationResults.contains("ISSUES:")) {
+                String issuesSection = validationResults.split("ISSUES:")[1].split("VALIDAZIONE DETTAGLIATA:")[0];
+                String[] issues = issuesSection.split("\n");
+                for (String issue : issues) {
+                    if (issue.trim().startsWith("Type:")) {
+                        String type = issue.split("Type:")[1].trim();
+                        String severity = "";
+                        String fix = "";
+                        
+                        for (String line : issues) {
+                            if (line.contains("Severity:")) {
+                                severity = line.split("Severity:")[1].trim();
+                            }
+                            if (line.contains("Fix:")) {
+                                fix = line.split("Fix:")[1].trim();
+                            }
+                        }
+                        
+                        enhancedInstructions.append(String.format(
+                            "- Migliora %s (Severità: %s): %s\n",
+                            type.toLowerCase(),
+                            severity,
+                            fix
+                        ));
+                    }
                 }
             }
-            
+                        
             return enhancedInstructions.toString();
         } catch (Exception e) {
             logger.error("Errore nell'analisi dei risultati della validazione", e);

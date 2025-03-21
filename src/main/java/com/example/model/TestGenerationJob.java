@@ -44,6 +44,7 @@ public class TestGenerationJob {
     private String testResult;
 
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("timestamp DESC")
     private List<JobLog> logs = new ArrayList<>();
 
     public enum JobStatus {

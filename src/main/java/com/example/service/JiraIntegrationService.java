@@ -1,12 +1,12 @@
 package com.example.service;
 
-import com.example.dto.JiraCredentialsDto;
-import com.example.dto.TicketContentDto;
+import com.example.dto.*;
 import com.example.model.JiraConnection;
 import com.example.repository.JiraConnectionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -25,11 +25,13 @@ public class JiraIntegrationService {
     private static final Logger logger = LoggerFactory.getLogger(JiraIntegrationService.class);
     private final JiraConnectionRepository jiraConnectionRepository;
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
     
     @Autowired
     public JiraIntegrationService(JiraConnectionRepository jiraConnectionRepository) {
         this.jiraConnectionRepository = jiraConnectionRepository;
         this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
     }
     
     public JiraConnection saveConnection(JiraCredentialsDto credentials) {
@@ -60,11 +62,11 @@ public class JiraIntegrationService {
             HttpHeaders headers = createHeaders(credentials.getUsername(), credentials.getApiToken());
             HttpEntity<String> entity = new HttpEntity<>(headers);
             
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<JiraUserDto> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
-                Map.class
+                JiraUserDto.class
             );
             
             if (!response.getStatusCode().is2xxSuccessful()) {
@@ -106,42 +108,35 @@ public class JiraIntegrationService {
         HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
         
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<JiraSearchResponseDto> response = restTemplate.exchange(
                 url,
                 HttpMethod.POST,
                 entity,
-                Map.class
+                JiraSearchResponseDto.class
             );
             
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 throw new RuntimeException("Errore nella ricerca dei ticket");
             }
             
-            List<Map<String, Object>> issues = (List<Map<String, Object>>) response.getBody().get("issues");
-            return issues.stream()
+            return response.getBody().getIssues().stream()
                 .map(this::convertToTicketDto)
                 .collect(java.util.stream.Collectors.toList());
                 
         } catch (HttpClientErrorException e) {
             logger.error("Errore client HTTP durante la ricerca dei ticket", e);
             
-            // Estrai informazioni dettagliate sull'errore
             String errorMessage = "Errore nella ricerca dei ticket";
             try {
-                // Prova a estrarre i messaggi di errore JSON dalla risposta
                 String responseBody = e.getResponseBodyAsString();
-                ObjectMapper mapper = new ObjectMapper();
-                Map<String, Object> errorData = mapper.readValue(responseBody, Map.class);
+                JiraErrorResponseDto errorData = objectMapper.readValue(responseBody, JiraErrorResponseDto.class);
                 
-                if (errorData.containsKey("errorMessages") && ((List)errorData.get("errorMessages")).size() > 0) {
-                    List<String> errorMessages = (List<String>) errorData.get("errorMessages");
-                    errorMessage = "Errore JQL: " + String.join(", ", errorMessages);
-                } else if (errorData.containsKey("errors") && !((Map)errorData.get("errors")).isEmpty()) {
-                    Map<String, String> errors = (Map<String, String>) errorData.get("errors");
-                    errorMessage = "Errore JQL: " + String.join(", ", errors.values());
+                if (errorData.getErrorMessages() != null && !errorData.getErrorMessages().isEmpty()) {
+                    errorMessage = "Errore JQL: " + String.join(", ", errorData.getErrorMessages());
+                } else if (errorData.getErrors() != null && !errorData.getErrors().isEmpty()) {
+                    errorMessage = "Errore JQL: " + String.join(", ", errorData.getErrors().values());
                 }
             } catch (Exception ex) {
-                // Se non riesci a estrarre un messaggio JSON, usa il messaggio di errore standard
                 errorMessage = "Errore durante la ricerca dei ticket: " + e.getStatusText();
             }
             
@@ -159,7 +154,6 @@ public class JiraIntegrationService {
         JiraConnection connection = jiraConnectionRepository.findById(connectionId)
                 .orElseThrow(() -> new RuntimeException("Connessione Jira non trovata"));
         
-        // Aggiorna l'ultimo utilizzo
         connection.setLastUsedAt(LocalDateTime.now());
         jiraConnectionRepository.save(connection);
         
@@ -171,11 +165,11 @@ public class JiraIntegrationService {
         HttpEntity<String> entity = new HttpEntity<>(headers);
         
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<JiraIssueDto> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
-                Map.class
+                JiraIssueDto.class
             );
             
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
@@ -196,34 +190,34 @@ public class JiraIntegrationService {
         }
     }
     
-    private TicketContentDto convertToTicketDto(Map<String, Object> issue) {
+    private TicketContentDto convertToTicketDto(JiraIssueDto issue) {
         TicketContentDto dto = new TicketContentDto();
-        dto.setTicketId((String) issue.get("key"));
+        dto.setTicketId(issue.getKey());
         
-        Map<String, Object> fields = (Map<String, Object>) issue.get("fields");
+        JiraIssueFieldsDto fields = issue.getFields();
         StringBuilder content = new StringBuilder();
-        content.append("Sommario: ").append(fields.get("summary")).append("\n\n");
+        content.append("Sommario: ").append(fields.getSummary()).append("\n\n");
         
-        if (fields.get("description") != null) {
-            content.append("Descrizione: ").append(fields.get("description")).append("\n\n");
+        if (fields.getDescription() != null) {
+            content.append("Descrizione: ").append(fields.getDescription()).append("\n\n");
         }
         
-        Map<String, Object> status = (Map<String, Object>) fields.get("status");
+        JiraStatusDto status = fields.getStatus();
         if (status != null) {
-            content.append("Stato: ").append(status.get("name")).append("\n");
+            content.append("Stato: ").append(status.getName()).append("\n");
         }
         
-        Map<String, Object> issueType = (Map<String, Object>) fields.get("issuetype");
+        JiraIssueTypeDto issueType = fields.getIssuetype();
         if (issueType != null) {
-            content.append("Tipo: ").append(issueType.get("name")).append("\n");
+            content.append("Tipo: ").append(issueType.getName()).append("\n");
         }
         
         dto.setContent(content.toString());
         
         List<String> components = new ArrayList<>();
-        List<Map<String, Object>> componentsList = (List<Map<String, Object>>) fields.get("components");
+        List<JiraComponentDto> componentsList = fields.getComponents();
         if (componentsList != null) {
-            componentsList.forEach(component -> components.add((String) component.get("name")));
+            componentsList.forEach(component -> components.add(component.getName()));
         }
         dto.setComponents(components);
         
@@ -242,7 +236,7 @@ public class JiraIntegrationService {
         return headers;
     }
     
-    public List<Map<String, Object>> getProjects(Long connectionId) {
+    public List<JiraProjectDto> getProjects(Long connectionId) {
         JiraConnection connection = jiraConnectionRepository.findById(connectionId)
                 .orElseThrow(() -> new RuntimeException("Connessione Jira non trovata"));
         
@@ -254,11 +248,11 @@ public class JiraIntegrationService {
         HttpEntity<String> entity = new HttpEntity<>(headers);
         
         try {
-            ResponseEntity<List> response = restTemplate.exchange(
+            ResponseEntity<List<JiraProjectDto>> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
-                List.class
+                new ParameterizedTypeReference<List<JiraProjectDto>>() {}
             );
             
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {

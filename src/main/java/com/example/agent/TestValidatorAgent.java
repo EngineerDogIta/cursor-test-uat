@@ -52,12 +52,13 @@ public class TestValidatorAgent {
             // Validazione dettagliata
             String detailedValidation = performValidation(ticketAnalysis, generatedTests);
             
-            // Combiniamo i risultati
+            // Combiniamo i risultati in un formato testuale semplice
             String combinedValidation = String.format("""
-                {
-                    "baseValidation": %s,
-                    "detailedValidation": %s
-                }
+                VALIDAZIONE BASE:
+                %s
+                
+                VALIDAZIONE DETTAGLIATA:
+                %s
                 """, baseValidation, detailedValidation);
             
             logger.info("Test validation completed successfully");

@@ -1,7 +1,6 @@
 package com.example.controller;
 
-import com.example.dto.JiraCredentialsDto;
-import com.example.dto.TicketContentDto;
+import com.example.dto.*;
 import com.example.model.JiraConnection;
 import com.example.service.JiraIntegrationService;
 import com.example.service.TestGenerationService;
@@ -61,13 +60,11 @@ public class JiraIntegrationController {
         model.addAttribute("connectionId", connectionId);
         
         try {
-            // Carica la lista dei progetti da Jira
-            List<Map<String, Object>> projects = jiraService.getProjects(connectionId);
+            List<JiraProjectDto> projects = jiraService.getProjects(connectionId);
             model.addAttribute("projects", projects);
         } catch (Exception e) {
             logger.error("Errore durante il caricamento dei progetti Jira", e);
             model.addAttribute("error", "Impossibile caricare i progetti: " + e.getMessage());
-            // Aggiungiamo una lista vuota per evitare errori nel template
             model.addAttribute("projects", Collections.emptyList());
         }
         
@@ -149,9 +146,9 @@ public class JiraIntegrationController {
     }
     
     @GetMapping("/connections/{connectionId}/projects")
-    public ResponseEntity<List<Map<String, Object>>> getProjects(@PathVariable Long connectionId) {
+    public ResponseEntity<List<JiraProjectDto>> getProjects(@PathVariable Long connectionId) {
         try {
-            List<Map<String, Object>> projects = jiraService.getProjects(connectionId);
+            List<JiraProjectDto> projects = jiraService.getProjects(connectionId);
             return ResponseEntity.ok(projects);
         } catch (Exception e) {
             logger.error("Errore durante il recupero dei progetti", e);
