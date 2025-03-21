@@ -1,15 +1,13 @@
 package com.example.controller;
 
 import com.example.model.TestGenerationJob;
-import com.example.model.TicketRequest;
+import com.example.dto.TicketContentDto;
 import com.example.service.TestGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
-
-import java.util.List;
 
 @Controller
 @RequestMapping("/")
@@ -33,14 +31,14 @@ public class TestGenerationViewController {
     @GetMapping("/ticket-form")
     public String ticketForm(Model model, HttpServletRequest request) {
         model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("ticketRequest", new TicketRequest());
+        model.addAttribute("ticketRequest", new TicketContentDto());
         return "views/ticket-form";
     }
 
     @PostMapping("/ticket/submit")
-    public String submitTicket(@ModelAttribute TicketRequest ticketRequest) {
-        TestGenerationJob job = testGenerationService.createJob(ticketRequest);
-        return "redirect:/job/" + job.getId();
+    public String submitTicket(@ModelAttribute TicketContentDto ticketRequest) {
+        testGenerationService.startTestGeneration(ticketRequest);
+        return "redirect:/";
     }
 
     @GetMapping("/job/{id}")

@@ -6,8 +6,8 @@ import com.example.agent.TestValidatorAgent;
 import com.example.dto.TicketContentDto;
 import com.example.model.JobLog;
 import com.example.model.TestGenerationJob;
-import com.example.model.TicketRequest;
 import com.example.repository.TestGenerationJobRepository;
+import com.example.repository.JobLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,21 +28,24 @@ public class TestGenerationService {
     private final TestGeneratorAgent testGenerator;
     private final TestValidatorAgent testValidator;
     private final TestGenerationJobRepository testGenerationRepository;
+    private final JobLogRepository jobLogRepository;
 
     @Autowired
     public TestGenerationService(
             TicketAnalyzerAgent ticketAnalyzer,
             TestGeneratorAgent testGenerator,
             TestValidatorAgent testValidator,
-            TestGenerationJobRepository jobRepository) {
+            TestGenerationJobRepository jobRepository,
+            JobLogRepository jobLogRepository) {
         this.ticketAnalyzer = ticketAnalyzer;
         this.testGenerator = testGenerator;
         this.testValidator = testValidator;
         this.testGenerationRepository = jobRepository;
+        this.jobLogRepository = jobLogRepository;
     }
 
     @Async("taskExecutor")
-    public void startTestGeneration(String jobId, TicketContentDto ticketDto) {
+    public void startTestGeneration(TicketContentDto ticketDto) {
         try {
             // Crea e salva il job
             TestGenerationJob job = new TestGenerationJob();
@@ -51,22 +54,16 @@ public class TestGenerationService {
             job.setComponents(String.join(", ", ticketDto.getComponents()));
             job.setStatus(TestGenerationJob.JobStatus.PENDING);
             job.setCreatedAt(LocalDateTime.now());
-            testGenerationRepository.save(job);
+            testGenerationRepository.saveAndFlush(job);
 
-            processTestGeneration(jobId, ticketDto, job.getId());
+            processTestGeneration(job.getId(), ticketDto, job.getId());
         } catch (Exception e) {
-            logger.error("Error starting test generation for jobId: " + jobId, e);
-            TestGenerationJob job = testGenerationRepository.findById(Long.parseLong(jobId)).orElse(null);
-            if (job != null) {
-                job.setStatus(TestGenerationJob.JobStatus.FAILED);
-                job.setCompletedAt(LocalDateTime.now());
-                testGenerationRepository.save(job);
-            }
+            logger.error("Error starting test generation with ticketDto {}", ticketDto, e);
         }
     }
 
     @Async
-    protected void processTestGeneration(String jobId, TicketContentDto ticketDto, Long jobUid) {
+    protected void processTestGeneration(Long jobId, TicketContentDto ticketDto, Long jobUid) {
         try {
             // 1. Analizza il ticket
             logger.debug("Starting ticket analysis for jobId: {}", jobId);
@@ -125,18 +122,26 @@ public class TestGenerationService {
     }
 
     public Map<String, Object> getJobStatus(String jobId) {
-        TestGenerationJob job = testGenerationRepository.findById(Long.parseLong(jobId)).orElse(null);
-        if (job == null) {
+        try {
+            Long jobIdLong = Long.parseLong(jobId);
+            TestGenerationJob job = testGenerationRepository.findById(jobIdLong).orElse(null);
+            if (job == null) {
+                return Map.of(
+                    "status", "NOT_FOUND",
+                    "message", "Job not found"
+                );
+            }
+            
             return Map.of(
-                "status", "NOT_FOUND",
-                "message", "Job not found"
+                "status", job.getStatus().name(),
+                "error", job.getErrorMessage() != null ? job.getErrorMessage() : ""
+            );
+        } catch (NumberFormatException e) {
+            return Map.of(
+                "status", "INVALID_ID",
+                "message", "Invalid job ID format"
             );
         }
-        
-        return Map.of(
-            "status", job.getStatus().name(),
-            "error", job.getErrorMessage() != null ? job.getErrorMessage() : ""
-        );
     }
 
     public List<TestGenerationJob> getActiveJobs() {
@@ -159,14 +164,7 @@ public class TestGenerationService {
     }
 
     @Transactional
-    public TestGenerationJob createJob(TicketRequest request) {
-        TestGenerationJob job = new TestGenerationJob();
-        job.setJiraTicket(request.getJiraTicket());
-        job.setDescription(request.getDescription());
-        job.setComponents(request.getComponents() != null ? request.getComponents().trim() : "");
-        job.setStatus(TestGenerationJob.JobStatus.PENDING);
-        job.setCreatedAt(LocalDateTime.now());
-        
+    public TestGenerationJob createJob(TestGenerationJob job) {        
         // Salva il job e assicurati che la transazione sia completata
         job = testGenerationRepository.save(job);
         testGenerationRepository.flush(); // Forza il flush della transazione
@@ -259,14 +257,14 @@ public class TestGenerationService {
         testGenerationRepository.save(job);
     }
 
+    @Transactional
     private void addJobLog(TestGenerationJob job, String level, String message) {
         JobLog log = new JobLog();
+        log.setJob(job);
         log.setLevel(level);
         log.setMessage(message);
         log.setTimestamp(LocalDateTime.now());
-        log.setJob(job);
+        jobLogRepository.save(log);
         job.addLog(log);
-        testGenerationRepository.save(job);
-        logger.info("Aggiunto log al job {}: {} - {}", job.getId(), level, message);
     }
 } 

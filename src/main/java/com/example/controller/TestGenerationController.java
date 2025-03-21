@@ -1,8 +1,5 @@
 package com.example.controller;
 
-import com.example.agent.TicketAnalyzerAgent;
-import com.example.agent.TestGeneratorAgent;
-import com.example.agent.TestValidatorAgent;
 import com.example.dto.TicketContentDto;
 import com.example.dto.TestGenerationResponseDto;
 import com.example.service.TestGenerationService;
@@ -53,7 +50,7 @@ public class TestGenerationController {
         logger.info("Starting asynchronous test generation for ticket: {} with jobId: {}", 
                    ticketDto.getTicketId(), jobId);
         
-        testGenerationService.startTestGeneration(jobId, ticketDto);
+        testGenerationService.startTestGeneration(ticketDto);
         
         return ResponseEntity.ok(new TestGenerationResponseDto(
             jobId,

@@ -20,16 +20,16 @@
 
         <div class="card">
             <div class="card-body">
-                <form th:action="@{/ticket/submit}" th:object="${ticketRequest}" method="post" class="no-confirmation">
+                <form th:action="@{/ticket/submit}" th:object="${ticketRequest}" method="post">
                     <div class="mb-3">
-                        <label for="jiraTicket" class="form-label">Ticket Jira</label>
-                        <input type="text" class="form-control" id="jiraTicket" th:field="*{jiraTicket}" required>
+                        <label for="ticketId" class="form-label">Ticket Jira</label>
+                        <input type="text" class="form-control" id="ticketId" th:field="*{ticketId}" required>
                         <div class="form-text">Inserisci l'ID del ticket Jira (es. PROJ-123)</div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="description" class="form-label">Descrizione</label>
-                        <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
+                        <label for="content" class="form-label">Descrizione</label>
+                        <textarea class="form-control" id="content" th:field="*{content}" rows="3"></textarea>
                         <div class="form-text">Inserisci una descrizione opzionale del ticket</div>
                     </div>
 

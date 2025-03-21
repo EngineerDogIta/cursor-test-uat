@@ -45,7 +45,7 @@ class TestGenerationControllerTest {
         assertEquals("Generazione dei test avviata con successo", responseDto.getMessage());
         assertNull(responseDto.getError());
         
-        verify(testGenerationService).startTestGeneration(anyString(), eq(ticketDto));
+        verify(testGenerationService).startTestGeneration(eq(ticketDto));
     }
 
     @Test
@@ -79,13 +79,13 @@ class TestGenerationControllerTest {
         var response = controller.startTestGeneration(ticketDto);
 
         // Assert
-        assertEquals(400, response.getStatusCodeValue());
+        assertEquals(400, response.getStatusCode().value());
         TestGenerationResponseDto responseDto = response.getBody();
         assertNotNull(responseDto);
         assertEquals("Il contenuto del ticket non può essere vuoto", responseDto.getError());
         assertNull(responseDto.getJobId());
         assertNull(responseDto.getMessage());
-        verify(testGenerationService, never()).startTestGeneration(anyString(), any());
+        verify(testGenerationService, never()).startTestGeneration(any());
     }
 
     @Test
@@ -98,13 +98,13 @@ class TestGenerationControllerTest {
         var response = controller.startTestGeneration(ticketDto);
 
         // Assert
-        assertEquals(400, response.getStatusCodeValue());
+        assertEquals(400, response.getStatusCode().value());
         TestGenerationResponseDto responseDto = response.getBody();
         assertNotNull(responseDto);
         assertEquals("L'ID del ticket non può essere vuoto", responseDto.getError());
         assertNull(responseDto.getJobId());
         assertNull(responseDto.getMessage());
-        verify(testGenerationService, never()).startTestGeneration(anyString(), any());
+        verify(testGenerationService, never()).startTestGeneration(any());
     }
 
     @Test
@@ -117,7 +117,7 @@ class TestGenerationControllerTest {
         var response = controller.getTestGenerationStatus(jobId);
 
         // Assert
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
         assertTrue(response.getBody().containsKey("error"));
         assertEquals("Job non trovato", response.getBody().get("error"));
         verify(testGenerationService).getJobStatus(jobId);
