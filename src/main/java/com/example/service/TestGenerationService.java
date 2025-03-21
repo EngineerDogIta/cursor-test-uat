@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 @Service
 public class TestGenerationService {
@@ -59,12 +60,12 @@ public class TestGenerationService {
             testGenerationRepository.saveAndFlush(job);
             
             // Ora possiamo loggare con il job creato
-            addJobLog(job, "INFO", "Inizio processo di generazione test per il ticket: " + ticketDto.getTicketId());
-            addJobLog(job, "INFO", "Job creato con ID: " + job.getId());
-            addJobLog(job, "INFO", "Componenti coinvolti: " + job.getComponents());
+            addJobLog(job, "INFO", "Starting test generation process for ticket: " + ticketDto.getTicketId());
+            addJobLog(job, "INFO", "Job created with ID: " + job.getId());
+            addJobLog(job, "INFO", "Components involved: " + job.getComponents());
 
             // Utilizziamo sempre lo stesso metodo per tutti i tipi di ticket
-            addJobLog(job, "INFO", "Processo di generazione test standard avviato");
+            addJobLog(job, "INFO", "Standard test generation process started");
             processTestGeneration(job.getId(), ticketDto);
         } catch (Exception e) {
             logger.error("Error starting test generation with ticketDto {}", ticketDto, e);
@@ -77,11 +78,11 @@ public class TestGenerationService {
             TestGenerationJob job = testGenerationRepository.findById(jobId).orElseThrow();
             
             // 1. Analizza il ticket
-            addJobLog(job, "INFO", "Inizio analisi del ticket");
+            addJobLog(job, "INFO", "Starting ticket analysis");
             String ticketAnalysis;
             
             if (ticketDto != null) {
-                addJobLog(job, "DEBUG", "Contenuto del ticket: " + ticketDto.getContent());
+                addJobLog(job, "DEBUG", "Ticket content: " + ticketDto.getContent());
                 ticketAnalysis = ticketAnalyzer.analyzeTicket(ticketDto);
             } else {
                 // Se non abbiamo il ticketDto, lo creiamo dai dati del job
@@ -92,13 +93,13 @@ public class TestGenerationService {
                 ticketAnalysis = ticketAnalyzer.analyzeTicket(jobTicketDto);
             }
             
-            addJobLog(job, "INFO", "Analisi del ticket completata");
-            addJobLog(job, "DEBUG", "Risultato analisi: " + ticketAnalysis);
+            addJobLog(job, "INFO", "Ticket analysis completed");
+            addJobLog(job, "DEBUG", "Analysis result: " + ticketAnalysis);
             
             // Aggiorna lo stato del job
             job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
             testGenerationRepository.save(job);
-            addJobLog(job, "INFO", "Stato del job aggiornato a IN_PROGRESS");
+            addJobLog(job, "INFO", "Job status updated to IN_PROGRESS");
             
             // 2. Genera e valida i test
             String generatedTests = null;
@@ -107,46 +108,87 @@ public class TestGenerationService {
             int attempts = 0;
             final int MAX_ATTEMPTS = 3;
             
+            // Tracciamento della qualità per ogni tentativo
+            List<String> qualityHistory = new ArrayList<>();
+            
             while (!testsValidated && attempts < MAX_ATTEMPTS) {
                 attempts++;
-                addJobLog(job, "INFO", "Tentativo " + attempts + " di " + MAX_ATTEMPTS);
+                addJobLog(job, "INFO", "Attempt " + attempts + " of " + MAX_ATTEMPTS);
                 
                 String enhancedPrompt = "";
                 if (attempts > 1 && validationResults != null) {
                     // Analizza i risultati precedenti per migliorare il prompt
                     enhancedPrompt = analyzeValidationAndEnhancePrompt(validationResults);
-                    addJobLog(job, "INFO", "Prompt migliorato in base alla validazione precedente");
-                    addJobLog(job, "DEBUG", "Prompt migliorato: " + enhancedPrompt);
+                    addJobLog(job, "INFO", "Prompt improved based on previous validation");
+                    addJobLog(job, "DEBUG", "Improved prompt: " + enhancedPrompt);
                 }
                 
-                addJobLog(job, "INFO", "Inizio generazione dei test");
+                addJobLog(job, "INFO", "Starting test generation");
                 generatedTests = testGenerator.generateTests(ticketAnalysis, enhancedPrompt);
-                addJobLog(job, "INFO", "Generazione dei test completata");
-                addJobLog(job, "DEBUG", "Test generati: " + generatedTests);
+                addJobLog(job, "INFO", "Test generation completed");
+                addJobLog(job, "DEBUG", "Generated tests: " + generatedTests);
                 
                 // 3. Validazione dei test
-                addJobLog(job, "INFO", "Inizio validazione dei test");
+                addJobLog(job, "INFO", "Starting test validation");
                 validationResults = testValidator.validateTests(ticketAnalysis, generatedTests);
-                addJobLog(job, "INFO", "Validazione dei test completata");
-                addJobLog(job, "DEBUG", "Risultati validazione: " + validationResults);
+                addJobLog(job, "INFO", "Test validation completed");
+                addJobLog(job, "DEBUG", "Validation results: " + validationResults);
                 
-                testsValidated = validationResults.contains("OVERALL_QUALITY: QUALITY_HIGH") || 
-                                validationResults.contains("OVERALL_QUALITY: QUALITY_MEDIUM");
+                // Estrai e salva la qualità complessiva per questo tentativo
+                String overallQuality = extractOverallQuality(validationResults);
+                qualityHistory.add(overallQuality);
+                
+                testsValidated = overallQuality.equals("QUALITY_HIGH") || 
+                                overallQuality.equals("QUALITY_MEDIUM");
                 
                 if (!testsValidated && attempts < MAX_ATTEMPTS) {
-                    addJobLog(job, "WARN", "La qualità dei test non è sufficiente, nuovo tentativo...");
+                    addJobLog(job, "WARN", "Test quality is not sufficient, retrying...");
+                    addJobLog(job, "INFO", "Current quality: " + overallQuality);
                 }
             }
             
             // 4. Verifica della qualità finale
             if (testsValidated) {
-                addJobLog(job, "INFO", "Test validati con successo");
+                addJobLog(job, "INFO", "Tests validated successfully");
+                addJobLog(job, "INFO", "Quality history: " + String.join(" → ", qualityHistory));
                 
                 // Crea il risultato finale
-                String finalResult = "# Test generati per " + job.getJiraTicket() + "\n\n"
-                    + "## Analisi del ticket\n" + ticketAnalysis + "\n\n"
-                    + "## Test UAT\n" + generatedTests + "\n\n"
-                    + "## Validazione\n" + validationResults;
+                String finalResult = """
+                    # UAT Tests for %s
+                    
+                    ## General Information
+                    * **Ticket ID**: %s
+                    * **Generation Date**: %s
+                    * **Validation**: %s
+                    * **Attempts**: %d
+                    
+                    ## Ticket Analysis
+                    %s
+                    
+                    ## Generated UAT Tests
+                    %s
+                    
+                    ## Validation Report
+                    %s
+                    
+                    ## Attempt History
+                    %s
+                    
+                    ## Implementation Notes
+                    * These tests were automatically generated and should be reviewed by a QA.
+                    * If in doubt, refer to the original ticket documentation.
+                    * Report any issues or suggestions to: qa-feedback@example.com
+                    """.formatted(
+                        job.getJiraTicket(),
+                        job.getJiraTicket(),
+                        LocalDateTime.now().toString(),
+                        qualityHistory.isEmpty() ? "N/A" : qualityHistory.get(qualityHistory.size() - 1),
+                        attempts,
+                        ticketAnalysis,
+                        generatedTests,
+                        validationResults,
+                        generateAttemptHistory(qualityHistory)
+                    );
                 
                 // Salva il risultato nel job e completa
                 job.setTestResult(finalResult);
@@ -154,8 +196,13 @@ public class TestGenerationService {
                 
                 completeJob(job.getId());
             } else {
-                String errorMsg = "La qualità dei test generati non è sufficiente dopo " + MAX_ATTEMPTS + " tentativi";
+                String errorMsg = "Test quality is not sufficient after " + MAX_ATTEMPTS + " attempts";
                 addJobLog(job, "ERROR", errorMsg);
+                addJobLog(job, "INFO", "Quality history: " + String.join(" → ", qualityHistory));
+                
+                // Salva comunque i dati utili per il debug
+                testGenerationRepository.saveAndFlush(job);
+                
                 throw new RuntimeException(errorMsg);
             }
             
@@ -168,7 +215,7 @@ public class TestGenerationService {
             job.setErrorMessage(e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
             testGenerationRepository.save(job);
-            addJobLog(job, "ERROR", "Errore durante il processo: " + e.getMessage());
+            addJobLog(job, "ERROR", "Error during process: " + e.getMessage());
         }
     }
 
@@ -221,16 +268,16 @@ public class TestGenerationService {
         job = testGenerationRepository.save(job);
         testGenerationRepository.flush(); // Forza il flush della transazione
         
-        logger.info("Job creato con ID: {} e salvato nel database", job.getId());
+        logger.info("Job created with ID: {} and saved in the database", job.getId());
         
         // Avvia l'elaborazione in modo asincrono solo dopo che il job è stato salvato
         try {
             processTestGeneration(job.getId(), null);
         } catch (Exception e) {
-            logger.error("Errore nell'avvio del processo asincrono per il job {}: {}", job.getId(), e.getMessage());
+            logger.error("Error starting asynchronous process for job {}: {}", job.getId(), e.getMessage());
             // Aggiorna lo stato del job in caso di errore
             job.setStatus(TestGenerationJob.JobStatus.FAILED);
-            job.setErrorMessage("Errore nell'avvio del processo: " + e.getMessage());
+            job.setErrorMessage("Error starting process: " + e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
             testGenerationRepository.save(job);
         }
@@ -240,11 +287,11 @@ public class TestGenerationService {
 
     private void completeJob(Long jobId) {
         TestGenerationJob job = getJob(jobId);
-        addJobLog(job, "INFO", "Completamento del job");
+        addJobLog(job, "INFO", "Completing job");
         job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
         job.setCompletedAt(LocalDateTime.now());
         testGenerationRepository.saveAndFlush(job);
-        addJobLog(job, "INFO", "Job completato con successo");
+        addJobLog(job, "INFO", "Job completed successfully");
     }
 
     @Transactional
@@ -269,73 +316,66 @@ public class TestGenerationService {
             // Salva solo il log, non è necessario aggiornare il job
             jobLogRepository.save(log);
             
-            logger.debug("Log aggiunto con successo per il job {}: {} - {}", job.getId(), level, log.getMessage());
+            logger.debug("Log added successfully for job {}: {} - {}", job.getId(), level, log.getMessage());
         } catch (Exception e) {
-            logger.error("Errore durante l'aggiunta del log per il job {}: {}", job.getId(), e.getMessage());
+            logger.error("Error during adding log for job {}: {}", job.getId(), e.getMessage());
             // Fallback: logga solo nel logger di sistema
             logger.info("[JOB_{}] {} - {}", job.getId(), level, message);
         }
     }
 
+    /**
+     * Classe per gestire le metriche di validazione in modo strutturato
+     */
+    private static class ValidationMetrics {
+        private String coherence = "";
+        private String completeness = "";
+        private String clarity = "";
+        private String testData = "";
+        private List<String[]> issues = new ArrayList<>();
+        
+        public boolean isMetricLow(String metric) {
+            return metric != null && !metric.isEmpty() && metric.equals("QUALITY_LOW");
+        }
+    }
+
+    /**
+     * Analizza i risultati della validazione e crea un prompt migliorato
+     * per la generazione successiva
+     */
     private String analyzeValidationAndEnhancePrompt(String validationResults) {
         try {
+            // Estrazione e analisi delle metriche
+            ValidationMetrics metrics = extractValidationMetrics(validationResults);
             StringBuilder enhancedInstructions = new StringBuilder();
-            enhancedInstructions.append("\nMiglioramenti richiesti basati sulla validazione precedente:\n");
             
-            // Estrai le metriche
-            String coherence = "";
-            String completeness = "";
-            String clarity = "";
-            String testData = "";
+            enhancedInstructions.append("\nImprovements required based on previous validation:\n");
             
-            if (validationResults.contains("Coherence:")) {
-                coherence = validationResults.split("Coherence:")[1].split("\n")[0].trim();
+            // Aggiunge suggerimenti in base alle metriche con qualità bassa
+            if (metrics.isMetricLow(metrics.coherence)) {
+                enhancedInstructions.append("- Improve test coherence: ensure tests are aligned with ticket requirements\n");
             }
-            if (validationResults.contains("Completeness:")) {
-                completeness = validationResults.split("Completeness:")[1].split("\n")[0].trim();
+            if (metrics.isMetricLow(metrics.completeness)) {
+                enhancedInstructions.append("- Improve completeness: add tests for missing scenarios\n");
             }
-            if (validationResults.contains("Clarity:")) {
-                clarity = validationResults.split("Clarity:")[1].split("\n")[0].trim();
+            if (metrics.isMetricLow(metrics.clarity)) {
+                enhancedInstructions.append("- Improve clarity: make tests more readable and understandable\n");
             }
-            if (validationResults.contains("TestData:")) {
-                testData = validationResults.split("TestData:")[1].split("\n")[0].trim();
+            if (metrics.isMetricLow(metrics.testData)) {
+                enhancedInstructions.append("- Improve test data: provide more specific and realistic test data\n");
             }
             
-            // Aggiungi suggerimenti basati sulle metriche
-            if (coherence.equals("QUALITY_LOW")) {
-                enhancedInstructions.append("- Migliora la coerenza dei test: assicurati che i test siano allineati con i requisiti del ticket\n");
-            }
-            if (completeness.equals("QUALITY_LOW")) {
-                enhancedInstructions.append("- Migliora la completezza: aggiungi test per scenari mancanti\n");
-            }
-            if (clarity.equals("QUALITY_LOW")) {
-                enhancedInstructions.append("- Migliora la chiarezza: rendi i test più leggibili e comprensibili\n");
-            }
-            if (testData.equals("QUALITY_LOW")) {
-                enhancedInstructions.append("- Migliora i dati di test: fornisci dati di test più specifici e realistici\n");
-            }
-            
-            // Estrai e aggiungi i problemi specifici
-            if (validationResults.contains("ISSUES:")) {
-                String issuesSection = validationResults.split("ISSUES:")[1].split("VALIDAZIONE DETTAGLIATA:")[0];
-                String[] issues = issuesSection.split("\n");
-                for (String issue : issues) {
-                    if (issue.trim().startsWith("Type:")) {
-                        String type = issue.split("Type:")[1].trim();
-                        String severity = "";
-                        String fix = "";
-                        
-                        for (String line : issues) {
-                            if (line.contains("Severity:")) {
-                                severity = line.split("Severity:")[1].trim();
-                            }
-                            if (line.contains("Fix:")) {
-                                fix = line.split("Fix:")[1].trim();
-                            }
-                        }
+            // Aggiunge i problemi specifici individuati durante la validazione
+            if (!metrics.issues.isEmpty()) {
+                enhancedInstructions.append("\nSpecific issues to resolve:\n");
+                for (String[] issue : metrics.issues) {
+                    if (issue.length >= 3) {
+                        String type = issue[0];
+                        String severity = issue[1];
+                        String fix = issue[2];
                         
                         enhancedInstructions.append(String.format(
-                            "- Migliora %s (Severità: %s): %s\n",
+                            "- Improve %s (Severity: %s): %s\n",
                             type.toLowerCase(),
                             severity,
                             fix
@@ -343,11 +383,131 @@ public class TestGenerationService {
                     }
                 }
             }
-                        
+            
             return enhancedInstructions.toString();
         } catch (Exception e) {
-            logger.error("Errore nell'analisi dei risultati della validazione", e);
-            return "";
+            logger.error("Error analyzing validation results", e);
+            // In caso di errore, restituisce un prompt generico
+            return "\nImprove test quality to meet validation requirements.\n";
         }
+    }
+
+    /**
+     * Estrae le metriche di validazione dal testo dei risultati
+     * gestendo in modo sicuro i possibili errori di formato
+     */
+    private ValidationMetrics extractValidationMetrics(String validationResults) {
+        ValidationMetrics metrics = new ValidationMetrics();
+        
+        if (validationResults == null || validationResults.isEmpty()) {
+            logger.warn("Empty or null validation results");
+            return metrics;
+        }
+        
+        try {
+            // Estrazione delle metriche principali
+            String[] lines = validationResults.split("\n");
+            for (String line : lines) {
+                String trimmedLine = line.trim();
+                if (trimmedLine.startsWith("Coherence:")) {
+                    metrics.coherence = trimmedLine.substring("Coherence:".length()).trim();
+                } else if (trimmedLine.startsWith("Completeness:")) {
+                    metrics.completeness = trimmedLine.substring("Completeness:".length()).trim();
+                } else if (trimmedLine.startsWith("Clarity:")) {
+                    metrics.clarity = trimmedLine.substring("Clarity:".length()).trim();
+                } else if (trimmedLine.startsWith("TestData:")) {
+                    metrics.testData = trimmedLine.substring("TestData:".length()).trim();
+                }
+            }
+            
+            // Estrazione dei problemi specifici in modo più sicuro
+            if (validationResults.contains("ISSUES:")) {
+                try {
+                    String[] parts = validationResults.split("ISSUES:");
+                    if (parts.length > 1) {
+                        String issuesPart = parts[1];
+                        
+                        // Se c'è una sezione successiva, limita la parte di issues
+                        if (issuesPart.contains("DETAILED VALIDATION:")) {
+                            issuesPart = issuesPart.split("DETAILED VALIDATION:")[0];
+                        }
+                        
+                        // Analisi dei problemi riga per riga
+                        String[] issueLines = issuesPart.split("\n");
+                        String type = null;
+                        String severity = null;
+                        String fix = null;
+                        
+                        for (String line : issueLines) {
+                            String trimmedLine = line.trim();
+                            if (trimmedLine.startsWith("Type:")) {
+                                // Se abbiamo già un problema completo, lo aggiungiamo alla lista
+                                if (type != null && severity != null && fix != null) {
+                                    metrics.issues.add(new String[]{type, severity, fix});
+                                }
+                                
+                                // Iniziamo un nuovo problema
+                                type = trimmedLine.substring("Type:".length()).trim();
+                                severity = null;
+                                fix = null;
+                            } else if (trimmedLine.startsWith("Severity:")) {
+                                severity = trimmedLine.substring("Severity:".length()).trim();
+                            } else if (trimmedLine.startsWith("Fix:")) {
+                                fix = trimmedLine.substring("Fix:".length()).trim();
+                            }
+                        }
+                        
+                        // Aggiungiamo l'ultimo problema se è completo
+                        if (type != null && severity != null && fix != null) {
+                            metrics.issues.add(new String[]{type, severity, fix});
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error parsing ISSUES section", e);
+                    // Continuiamo con le metriche che abbiamo già estratto
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error extracting validation metrics", e);
+            // Continuiamo con un oggetto metriche vuoto ma valido
+        }
+        
+        return metrics;
+    }
+
+    /**
+     * Estrae la qualità complessiva dai risultati della validazione
+     */
+    private String extractOverallQuality(String validationResults) {
+        if (validationResults == null || validationResults.isEmpty()) {
+            return "UNKNOWN";
+        }
+        
+        if (validationResults.contains("OVERALL_QUALITY: QUALITY_HIGH")) {
+            return "QUALITY_HIGH";
+        } else if (validationResults.contains("OVERALL_QUALITY: QUALITY_MEDIUM")) {
+            return "QUALITY_MEDIUM";
+        } else if (validationResults.contains("OVERALL_QUALITY: QUALITY_LOW")) {
+            return "QUALITY_LOW";
+        } else {
+            return "UNKNOWN";
+        }
+    }
+    
+    /**
+     * Generates a summary of attempt history
+     */
+    private String generateAttemptHistory(List<String> qualityHistory) {
+        StringBuilder history = new StringBuilder();
+        history.append("Attempts required: ").append(qualityHistory.size()).append("\n\n");
+        
+        for (int i = 0; i < qualityHistory.size(); i++) {
+            history.append("- Attempt ").append(i + 1).append(": ")
+                  .append(qualityHistory.get(i))
+                  .append(i == qualityHistory.size() - 1 ? " ✓" : " ✗")
+                  .append("\n");
+        }
+        
+        return history.toString();
     }
 } 

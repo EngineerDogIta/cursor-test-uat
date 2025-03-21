@@ -25,11 +25,17 @@ public class TestValidatorAgent {
         - Completeness: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
         - Clarity: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
         - TestData: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
+        - Coverage: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
         
         ISSUES:
         1. Type: [issue] 
            Severity: [SEVERITY_HIGH|SEVERITY_MEDIUM|SEVERITY_LOW]
            Fix: [suggestion]
+           Impact: [brief description of the issue impact]
+        
+        RECOMMENDATIONS:
+        1. [specific recommendation to improve test cases]
+        2. [another recommendation]
         """;
 
     @Autowired
@@ -43,21 +49,21 @@ public class TestValidatorAgent {
         logger.debug("Generated tests to validate: {}", generatedTests);
         
         try {
-            // Prima validazione base
+            // Base validation first
             Prompt basePrompt = new Prompt(SYSTEM_PROMPT + 
-                "\n\nAnalisi del ticket:\n" + ticketAnalysis + 
-                "\n\nTest generati:\n" + generatedTests);
+                "\n\nTicket Analysis:\n" + ticketAnalysis + 
+                "\n\nGenerated Tests:\n" + generatedTests);
             String baseValidation = chatClient.call(basePrompt).getResult().getOutput().getContent();
             
-            // Validazione dettagliata
+            // Detailed validation
             String detailedValidation = performValidation(ticketAnalysis, generatedTests);
             
-            // Combiniamo i risultati in un formato testuale semplice
+            // Combine the results in a simple text format
             String combinedValidation = String.format("""
-                VALIDAZIONE BASE:
+                BASE VALIDATION:
                 %s
                 
-                VALIDAZIONE DETTAGLIATA:
+                DETAILED VALIDATION:
                 %s
                 """, baseValidation, detailedValidation);
             
@@ -93,7 +99,10 @@ public class TestValidatorAgent {
                 1. Area: [risk area]
                    Level: [RISK_HIGH|RISK_MEDIUM|RISK_LOW]
                    Action: [mitigation]
-                """.formatted(ticketAnalysis, generatedTests);
+                   Priority: [implementation priority]
+                """
+                + "\n\nTicket Analysis:\n" + ticketAnalysis
+                + "\n\nGenerated Tests:\n" + generatedTests;
             
             Prompt prompt = new Prompt(validationPrompt);
             String validation = chatClient.call(prompt).getResult().getOutput().getContent();

@@ -21,8 +21,16 @@ public class TestGeneratorAgent {
         
         Format:
         
+        # UAT Test Suite for [Ticket ID]
+        
+        ## Overview
+        * **Objective**: [brief description of the test suite objective]
+        * **Priority**: [HIGH/MEDIUM/LOW]
+        * **Coverage**: [list of covered functionalities]
+        
         ## SCENARIO: [ID] - [Title]
         **Type:** [POSITIVE/NEGATIVE/BOUNDARY]
+        **Priority:** [HIGH/MEDIUM/LOW]
         
         **Preconditions:**
         * [list key preconditions]
@@ -31,9 +39,19 @@ public class TestGeneratorAgent {
         1. [step] - Expected: [result]
         2. [step] - Expected: [result]
         
-        **Test Data:** [key test data]
+        **Test Data:** 
+        ```
+        [key test data in structured format]
+        ```
+        
         **Dependencies:** [if any]
         **Automation:** [validation approach if possible]
+        **Technical Notes:** [specific considerations for implementers/testers]
+        
+        ## Traceability Matrix
+        | Scenario ID | Covered Requirement | Mitigated Risk |
+        |-------------|-------------------|------------------|
+        | [ID]        | [requirement]     | [risk]           |
         """;
 
     @Autowired
