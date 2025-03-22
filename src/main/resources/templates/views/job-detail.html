@@ -35,6 +35,25 @@
             padding: 0.2rem 0.4rem;
             border-radius: 0.25rem;
         }
+        .text-monospace {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        .log-container table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .log-container td {
+            vertical-align: middle;
+        }
+        .log-container .badge {
+            width: 70px;
+            text-align: center;
+            display: inline-block;
+        }
+        .copy-log-btn {
+            padding: 0.1rem 0.25rem;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -91,18 +110,52 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Job Logs</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="me-2">
+                                <select id="log-level-filter" class="form-select form-select-sm">
+                                    <option value="ALL">All Levels</option>
+                                    <option value="INFO" selected>INFO</option>
+                                    <option value="DEBUG">DEBUG</option>
+                                    <option value="WARNING">WARNING</option>
+                                    <option value="ERROR">ERROR</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" id="copy-all-logs" title="Copy All Logs">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="log-container">
-                            <div th:each="log : ${job.logs}" class="mb-2">
-                                <span th:text="${#temporals.format(log.timestamp, 'HH:mm:ss')}"></span>
-                                <span th:class="${log.level == 'INFO' ? 'badge bg-info' : 
-                                                log.level == 'WARNING' ? 'badge bg-warning' : 
-                                                log.level == 'DEBUG' ? 'badge bg-secondary' :
-                                                'badge bg-danger'}"
-                                      th:text="${log.level}"></span>
-                                <span th:text="${log.message}"></span>
-                            </div>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 90px">Time</th>
+                                        <th style="width: 90px">Level</th>
+                                        <th>Message</th>
+                                        <th style="width: 40px">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-table-body">
+                                    <tr th:each="log : ${job.logs}" th:class="${'log-entry ' + log.level}" 
+                                        th:data-level="${log.level}">
+                                        <td class="text-monospace" th:text="${#temporals.format(log.timestamp, 'HH:mm:ss')}"></td>
+                                        <td>
+                                            <span th:class="${log.level == 'INFO' ? 'badge bg-info' : 
+                                                            log.level == 'WARNING' ? 'badge bg-warning' : 
+                                                            log.level == 'DEBUG' ? 'badge bg-secondary' :
+                                                            'badge bg-danger'}"
+                                                  th:text="${log.level}"></span>
+                                        </td>
+                                        <td th:text="${log.message}"></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-secondary copy-log-btn" title="Copy Log Entry">
+                                                <i class="bi bi-clipboard-plus"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -184,18 +237,19 @@
         }
 
         function appendNewLogs(logs) {
-            const logContainer = document.querySelector('.log-container');
-            if (!logContainer) return;
+            const logsTableBody = document.getElementById('logs-table-body');
+            if (!logsTableBody) return;
 
-            // Pulisci i log esistenti
-            logContainer.innerHTML = '';
+            // Clear existing logs
+            logsTableBody.innerHTML = '';
 
             if (Array.isArray(logs) && logs.length > 0) {
                 logs.forEach(log => {
                     if (!log || !log.timestamp || !log.level || !log.message) return;
-
-                    const logEntry = document.createElement('div');
-                    logEntry.className = 'mb-2';
+                    
+                    const row = document.createElement('tr');
+                    row.className = 'log-entry ' + log.level;
+                    row.setAttribute('data-level', log.level);
                     
                     const timeString = new Date(log.timestamp).toLocaleTimeString('it-IT', {
                         hour: '2-digit',
@@ -208,16 +262,94 @@
                                      log.level === 'DEBUG' ? 'bg-secondary' :
                                      'bg-danger';
                     
-                    logEntry.innerHTML = `
-                        <span>${timeString}</span>
-                        <span class="badge ${badgeClass}">${log.level}</span>
-                        <span>${log.message}</span>
+                    row.innerHTML = `
+                        <td class="text-monospace">${timeString}</td>
+                        <td><span class="badge ${badgeClass}">${log.level}</span></td>
+                        <td>${log.message}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary copy-log-btn" title="Copy Log Entry">
+                                <i class="bi bi-clipboard-plus"></i>
+                            </button>
+                        </td>
                     `;
                     
-                    logContainer.appendChild(logEntry);
+                    logsTableBody.appendChild(row);
                 });
+                
+                // Apply the current filter
+                applyLogLevelFilter();
             } else {
-                logContainer.innerHTML = '<div class="alert alert-info">Nessun log disponibile</div>';
+                logsTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No logs available</td></tr>';
+            }
+        }
+
+        // Function to filter logs by level
+        function applyLogLevelFilter() {
+            const filter = document.getElementById('log-level-filter').value;
+            const rows = document.querySelectorAll('#logs-table-body tr.log-entry');
+            
+            rows.forEach(row => {
+                const level = row.getAttribute('data-level');
+                if (filter === 'ALL' || level === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Function to copy a log entry
+        function copyLogEntry(event) {
+            const button = event.currentTarget;
+            const row = button.closest('tr');
+            const time = row.querySelector('td:first-child').textContent;
+            const level = row.querySelector('.badge').textContent;
+            const message = row.querySelector('td:nth-child(3)').textContent;
+            
+            const logText = `${time} ${level} ${message}`;
+            
+            navigator.clipboard.writeText(logText).then(() => {
+                // Show success indication
+                const originalHtml = button.innerHTML;
+                button.innerHTML = '<i class="bi bi-check"></i>';
+                button.classList.add('btn-success');
+                button.classList.remove('btn-outline-secondary');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-secondary');
+                }, 1000);
+            });
+        }
+
+        // Function to copy all visible logs
+        function copyAllLogs() {
+            const rows = document.querySelectorAll('#logs-table-body tr.log-entry:not([style*="display: none"])');
+            let logText = '';
+            
+            rows.forEach(row => {
+                const time = row.querySelector('td:first-child').textContent;
+                const level = row.querySelector('.badge').textContent;
+                const message = row.querySelector('td:nth-child(3)').textContent;
+                logText += `${time} ${level} ${message}\n`;
+            });
+            
+            if (logText) {
+                navigator.clipboard.writeText(logText).then(() => {
+                    // Show success indication
+                    const button = document.getElementById('copy-all-logs');
+                    const originalHtml = button.innerHTML;
+                    button.innerHTML = '<i class="bi bi-check"></i>';
+                    button.classList.add('btn-success');
+                    button.classList.remove('btn-outline-secondary');
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalHtml;
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-outline-secondary');
+                    }, 1000);
+                });
             }
         }
 
@@ -374,6 +506,25 @@
             // Add event listeners for the buttons
             document.getElementById('copy-button')?.addEventListener('click', copyToClipboard);
             document.getElementById('export-button')?.addEventListener('click', exportAsMD);
+
+            // Initialize the log filter
+            const logLevelFilter = document.getElementById('log-level-filter');
+            if (logLevelFilter) {
+                logLevelFilter.addEventListener('change', applyLogLevelFilter);
+                // Apply filter on page load
+                applyLogLevelFilter();
+            }
+            
+            // Initialize copy buttons for log entries
+            document.querySelectorAll('.copy-log-btn').forEach(btn => {
+                btn.addEventListener('click', copyLogEntry);
+            });
+            
+            // Initialize copy all logs button
+            const copyAllLogsBtn = document.getElementById('copy-all-logs');
+            if (copyAllLogsBtn) {
+                copyAllLogsBtn.addEventListener('click', copyAllLogs);
+            }
         });
     </script>
 </th:block>
