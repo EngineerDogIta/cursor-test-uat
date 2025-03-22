@@ -42,27 +42,43 @@
         <div class="row mb-4">
             <div class="col">
                 <h2>Job Details</h2>
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Job Information</h5>
-                        <p><strong>ID:</strong> <span th:text="${job.id}"></span></p>
-                        <p><strong>Jira Ticket:</strong> <span th:text="${job.jiraTicket}"></span></p>
-                        <p><strong>Status:</strong> 
-                            <span th:class="${job.status == 'IN_PROGRESS' ? 'badge bg-warning text-dark status-badge' : 
-                                            job.status == 'COMPLETED' ? 'badge bg-success text-white status-badge' : 
-                                            job.status == 'FAILED' ? 'badge bg-danger text-white status-badge' :
-                                            job.status == 'PENDING' ? 'badge bg-secondary text-white status-badge' :
-                                            'badge bg-info text-white status-badge'}"
-                                  th:text="${job.status}"></span>
-                        </p>
-                        <p><strong>Creation Date:</strong> <span th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm:ss')}"></span></p>
-                        <p th:if="${job.completedAt != null}">
-                            <strong>Completion Date:</strong> 
-                            <span th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
-                        </p>
-                        <p th:if="${job.errorMessage != null}" class="text-danger">
-                            <strong>Error:</strong> <span th:text="${job.errorMessage}"></span>
-                        </p>
+                <div class="row">
+                    <!-- Left column: Job Information -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Job Information</h5>
+                                <p><strong>ID:</strong> <span th:text="${job.id}"></span></p>
+                                <p><strong>Jira Ticket:</strong> <span th:text="${job.jiraTicket}"></span></p>
+                                <p><strong>Status:</strong> 
+                                    <span th:class="${job.status == 'IN_PROGRESS' ? 'badge bg-warning text-dark status-badge' : 
+                                                    job.status == 'COMPLETED' ? 'badge bg-success text-white status-badge' : 
+                                                    job.status == 'FAILED' ? 'badge bg-danger text-white status-badge' :
+                                                    job.status == 'PENDING' ? 'badge bg-secondary text-white status-badge' :
+                                                    'badge bg-info text-white status-badge'}"
+                                          th:text="${job.status}"></span>
+                                </p>
+                                <p><strong>Creation Date:</strong> <span th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm:ss')}"></span></p>
+                                <p th:if="${job.completedAt != null}">
+                                    <strong>Completion Date:</strong> 
+                                    <span th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                                </p>
+                                <p th:if="${job.errorMessage != null}" class="text-danger">
+                                    <strong>Error:</strong> <span th:text="${job.errorMessage}"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right column: Ticket Description -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Ticket Description</h5>
+                                <div class="ticket-description">
+                                    <pre class="p-3 bg-light rounded" style="white-space: pre-wrap;" th:text="${job.description}"></pre>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
