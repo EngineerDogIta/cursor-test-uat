@@ -12,34 +12,66 @@ public class MetricsAnalysisService {
         try {
             ValidationMetrics metrics = extractValidationMetrics(validationResults);
             StringBuilder enhancedInstructions = new StringBuilder();
-            enhancedInstructions.append("\nImprovements required based on previous validation:\n");
+            
+            // Use structured format similar to JiraTicketAnalyzerAgent
+            enhancedInstructions.append("\n# Test Improvement Analysis\n\n");
+            
+            // Quality Metrics Section
+            enhancedInstructions.append("## Quality Metrics\n");
+            enhancedInstructions.append(String.format("* Coherence: %s\n", metrics.getCoherence()));
+            enhancedInstructions.append(String.format("* Completeness: %s\n", metrics.getCompleteness()));
+            enhancedInstructions.append(String.format("* Clarity: %s\n", metrics.getClarity()));
+            enhancedInstructions.append(String.format("* Test Data Quality: %s\n\n", metrics.getTestData()));
+            
+            // Required Improvements Section
+            enhancedInstructions.append("## Required Improvements\n");
             if (metrics.isMetricLow(metrics.getCoherence())) {
-                enhancedInstructions.append("- Improve test coherence: ensure tests are aligned with ticket requirements\n");
+                enhancedInstructions.append("* Coherence: Ensure tests align with ticket requirements and business logic\n");
+                enhancedInstructions.append("  - Validate test cases against acceptance criteria\n");
+                enhancedInstructions.append("  - Verify business rule coverage\n");
             }
             if (metrics.isMetricLow(metrics.getCompleteness())) {
-                enhancedInstructions.append("- Improve completeness: add tests for missing scenarios\n");
+                enhancedInstructions.append("* Completeness: Add coverage for missing scenarios\n");
+                enhancedInstructions.append("  - Include edge cases and boundary conditions\n");
+                enhancedInstructions.append("  - Add negative test cases\n");
             }
             if (metrics.isMetricLow(metrics.getClarity())) {
-                enhancedInstructions.append("- Improve clarity: make tests more readable and understandable\n");
+                enhancedInstructions.append("* Clarity: Improve test readability and documentation\n");
+                enhancedInstructions.append("  - Add clear test descriptions\n");
+                enhancedInstructions.append("  - Use meaningful variable names\n");
             }
             if (metrics.isMetricLow(metrics.getTestData())) {
-                enhancedInstructions.append("- Improve test data: provide more specific and realistic test data\n");
+                enhancedInstructions.append("* Test Data: Enhance data specificity and realism\n");
+                enhancedInstructions.append("  - Use realistic test data values\n");
+                enhancedInstructions.append("  - Include diverse data scenarios\n");
             }
+
+            // Specific Issues Section
             if (!metrics.getIssues().isEmpty()) {
-                enhancedInstructions.append("\nSpecific issues to resolve:\n");
+                enhancedInstructions.append("\n## Specific Issues\n");
                 for (String[] issue : metrics.getIssues()) {
                     if (issue.length >= 3) {
                         String type = issue[0];
                         String severity = issue[1];
                         String fix = issue[2];
-                        enhancedInstructions.append(String.format("- Improve %s (Severity: %s): %s\n", type.toLowerCase(), severity, fix));
+                        enhancedInstructions.append(String.format("### %s\n", type));
+                        enhancedInstructions.append(String.format("* Severity: %s\n", severity));
+                        enhancedInstructions.append(String.format("* Required Fix: %s\n", fix));
                     }
                 }
             }
+
+            // Technical Recommendations Section
+            enhancedInstructions.append("\n## Technical Recommendations\n");
+            enhancedInstructions.append("* Follow test naming conventions\n");
+            enhancedInstructions.append("* Ensure proper test isolation\n");
+            enhancedInstructions.append("* Validate error handling scenarios\n");
+            enhancedInstructions.append("* Consider performance implications\n");
+            
             return enhancedInstructions.toString();
         } catch (Exception e) {
             logger.error("Error analyzing validation results", e);
-            return "\nImprove test quality to meet validation requirements.\n";
+            return "\n# Test Improvement Required\n\nPlease improve test quality to meet validation requirements.\n";
         }
     }
 

@@ -19,27 +19,37 @@ public class TestGeneratorAgent {
         IMPORTANT: Use the ticket information provided in the Required Input section below to populate the document.
         If any information is missing in the Required Input, use the default values specified in the template.
         
-        Ticket Information:
-        Ticket ID: [insert ID or "Not provided"]
-        Description: [insert concise description or "Not provided"]
-        Type: [Bug/Feature/Enhancement or "Not provided"]
-        Impacted Components: [list of components separated by commas or "Not provided"]
+        # UAT Test Document
         
-        Test Objectives:
+        ## Ticket Information
+        | Field | Value |
+        |-------|-------|
+        | Ticket ID | [insert ID or "Not provided"] |
+        | Description | [insert concise description or "Not provided"] |
+        | Type | [Bug/Feature/Enhancement or "Not provided"] |
+        | Impacted Components | [list of components separated by commas or "Not provided"] |
+        
+        ## Test Objectives
         Provide a brief description (3-5 sentences) of the main testing objectives from an end-user perspective. Even if details are sparse, assume plausible objectives.
         
-        Test Cases:
+        ## Test Cases
         Generate at least one detailed test case following the structure below. If ticket details are incomplete, use default values such as "Not provided" or "Standard setup".
         
-        ID: [Unique test case identifier]
-        Title: [Concise title describing the test objective]
-        Prerequisites: [Prerequisites or environment setup; use "Standard setup" if not provided]
-        Steps:
-        [First step to perform]
-        [Second step to perform]
-        [Additional steps as needed]
-        Expected Result: [Outcome expected after executing the steps]
-        Test Data: [Input data required for the test, or "Not provided" if none]
+        ### Test Case [ID]
+        
+        | Field | Description |
+        |-------|-------------|
+        | Title | [Concise title describing the test objective] |
+        | Prerequisites | [Prerequisites or environment setup; use "Standard setup" if not provided] |
+        | Test Data | [Input data required for the test, or "Not provided" if none] |
+        
+        #### Test Steps
+        1. [First step to perform]
+        2. [Second step to perform]
+        3. [Additional steps as needed]
+        
+        #### Expected Result
+        [Outcome expected after executing the steps]
         
         IMPORTANT: Do NOT include any additional instructions or generic advice. The final output must solely adhere to this structure.
         """;

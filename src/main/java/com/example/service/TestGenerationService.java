@@ -95,7 +95,7 @@ public class TestGenerationService {
             }
             
             jobLogService.addJobLog(job, "INFO", "Ticket analysis completed");
-            jobLogService.addJobLog(job, "DEBUG", "Analysis result: " + ticketAnalysis);
+            jobLogService.addJobLog(job, "DEBUG", "Analysis result:\n" + ticketAnalysis);
             
             job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
             testGenerationRepository.save(job);
@@ -109,24 +109,35 @@ public class TestGenerationService {
             
             while (!testsValidated && attempts < properties.getMaxAttempts()) {
                 attempts++;
-                jobLogService.addJobLog(job, "INFO", "Attempt " + attempts + " of " + properties.getMaxAttempts());
+                jobLogService.addJobLog(job, "INFO", "Starting iteration " + attempts + " of " + properties.getMaxAttempts());
                 
                 String enhancedPrompt = "";
                 if (attempts > 1 && validationResults != null) {
                     enhancedPrompt = metricsAnalysisService.analyzeValidationAndEnhancePrompt(validationResults);
-                    jobLogService.addJobLog(job, "INFO", "Prompt improved based on previous validation");
-                    jobLogService.addJobLog(job, "DEBUG", "Improved prompt: " + enhancedPrompt);
+                    jobLogService.addJobLog(job, "INFO", "Generated structured improvement analysis");
+                    jobLogService.addJobLog(job, "DEBUG", "Improvement analysis:\n" + enhancedPrompt);
+                    
+                    // Log specific sections for better traceability
+                    String[] sections = enhancedPrompt.split("\n## ");
+                    for (String section : sections) {
+                        if (section.startsWith("Quality Metrics") || 
+                            section.startsWith("Required Improvements") || 
+                            section.startsWith("Specific Issues") ||
+                            section.startsWith("Technical Recommendations")) {
+                            jobLogService.addJobLog(job, "INFO", "Section: " + section.split("\n")[0]);
+                        }
+                    }
                 }
                 
-                jobLogService.addJobLog(job, "INFO", "Starting test generation");
+                jobLogService.addJobLog(job, "INFO", "Starting test generation with enhanced context");
                 generatedTests = testGenerator.generateTests(ticketAnalysis, enhancedPrompt);
                 jobLogService.addJobLog(job, "INFO", "Test generation completed");
-                jobLogService.addJobLog(job, "DEBUG", "Generated tests: " + generatedTests);
+                jobLogService.addJobLog(job, "DEBUG", "Generated tests:\n" + generatedTests);
                 
                 jobLogService.addJobLog(job, "INFO", "Starting test validation");
                 validationResults = testValidator.validateTests(ticketAnalysis, generatedTests);
                 jobLogService.addJobLog(job, "INFO", "Test validation completed");
-                jobLogService.addJobLog(job, "DEBUG", "Validation results: " + validationResults);
+                jobLogService.addJobLog(job, "DEBUG", "Validation results:\n" + validationResults);
                 
                 String overallQuality = metricsAnalysisService.extractOverallQuality(validationResults);
                 qualityHistory.add(overallQuality);
@@ -134,22 +145,22 @@ public class TestGenerationService {
                 testsValidated = properties.getAcceptableQualityLevels().contains(overallQuality);
                 
                 if (!testsValidated && attempts < properties.getMaxAttempts()) {
-                    jobLogService.addJobLog(job, "WARN", "Test quality is not sufficient, retrying...");
-                    jobLogService.addJobLog(job, "INFO", "Current quality: " + overallQuality);
+                    jobLogService.addJobLog(job, "WARN", "Test quality needs improvement (Quality: " + overallQuality + ")");
+                    jobLogService.addJobLog(job, "INFO", "Preparing for next iteration with structured improvements");
                 }
             }
             
             if (testsValidated) {
                 jobLogService.addJobLog(job, "INFO", "Tests validated successfully");
-                jobLogService.addJobLog(job, "INFO", "Quality history: " + String.join(" → ", qualityHistory));
+                jobLogService.addJobLog(job, "INFO", "Quality progression: " + String.join(" → ", qualityHistory));
                 String finalResult = generatedTests;
                 job.setTestResult(finalResult);
                 testGenerationRepository.saveAndFlush(job);
                 completeJob(job.getId());
             } else {
-                String errorMsg = "Test quality is not sufficient after " + properties.getMaxAttempts() + " attempts";
+                String errorMsg = "Test quality did not meet requirements after " + properties.getMaxAttempts() + " iterations";
                 jobLogService.addJobLog(job, "ERROR", errorMsg);
-                jobLogService.addJobLog(job, "INFO", "Quality history: " + String.join(" → ", qualityHistory));
+                jobLogService.addJobLog(job, "INFO", "Quality progression: " + String.join(" → ", qualityHistory));
                 testGenerationRepository.saveAndFlush(job);
                 throw new RuntimeException(errorMsg);
             }
@@ -160,7 +171,7 @@ public class TestGenerationService {
             job.setErrorMessage(e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
             testGenerationRepository.save(job);
-            jobLogService.addJobLog(job, "ERROR", "Error during process: " + e.getMessage());
+            jobLogService.addJobLog(job, "ERROR", "Process failed: " + e.getMessage());
         }
     }
 
