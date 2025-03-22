@@ -4,6 +4,7 @@
 <head>
     <title>Job Details</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     <style>
         pre {
             white-space: pre-wrap;
@@ -110,8 +111,16 @@
             <!-- Colonna destra: Risultati dei Test -->
             <div class="col-md-6">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Generated Test UAT</h5>
+                        <div class="btn-group" th:if="${job.testResult != null and !job.testResult.isEmpty()}">
+                            <button class="btn btn-sm btn-outline-secondary" id="copy-button" title="Copy to Clipboard">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" id="export-button" title="Export as MD File">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <!-- Risultati dei test -->
@@ -147,7 +156,7 @@
 
     <!-- Script principale -->
     <script>
-        function updateJobStatus(status) {
+        function updateJobStatusDisplay(status) {
             const statusElement = document.querySelector('.status-badge');
             if (statusElement && status) {
                 statusElement.textContent = status;
@@ -242,6 +251,112 @@
             gfm: true
         });
 
+        // Format the markdown content
+        function formatMarkdown() {
+            const testContainer = document.getElementById('test-result-content');
+            if (testContainer) {
+                // Get the raw markdown content
+                const originalContent = testContainer.getAttribute('data-original-content') || testContainer.textContent;
+                
+                // Apply more comprehensive formatting
+                let formattedContent = originalContent
+                    // Fix headers spacing
+                    .replace(/^(#{1,6})\s*(.+?)$/gm, '$1 $2')
+                    // Standardize list items spacing
+                    .replace(/^(\s*[-*+])\s+(.+?)$/gm, '$1 $2')
+                    // Standardize numbered lists
+                    .replace(/^(\s*\d+\.)\s+(.+?)$/gm, '$1 $2')
+                    // Replace multiple newlines with double newlines
+                    .replace(/\n{3,}/g, '\n\n')
+                    // Remove trailing whitespace
+                    .replace(/\s+$/gm, '')
+                    // Ensure empty line before headers
+                    .replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2')
+                    // Ensure empty line before lists
+                    .replace(/([^\n])\n(\s*[-*+]\s)/g, '$1\n\n$2')
+                    // Standardize table formatting if present
+                    .replace(/\|\s*/g, '| ')
+                    .replace(/\s*\|/g, ' |')
+                    .replace(/\|(?=\n)/g, ' |');
+                
+                // Update the display
+                testContainer.innerHTML = marked.parse(formattedContent);
+                
+                // Store the original content if not already stored
+                if (!testContainer.getAttribute('data-original-content')) {
+                    testContainer.setAttribute('data-original-content', originalContent);
+                }
+                
+                // Show a success notification
+                const formatButton = document.getElementById('format-button');
+                const originalHTML = formatButton.innerHTML;
+                
+                formatButton.innerHTML = '<i class="bi bi-check"></i>';
+                formatButton.classList.add('btn-success');
+                formatButton.classList.remove('btn-outline-secondary');
+                
+                setTimeout(() => {
+                    formatButton.innerHTML = originalHTML;
+                    formatButton.classList.remove('btn-success');
+                    formatButton.classList.add('btn-outline-secondary');
+                }, 2000);
+            }
+        }
+
+        // Copy content to clipboard
+        function copyToClipboard() {
+            const testContainer = document.getElementById('test-result-content');
+            if (!testContainer) return;
+            
+            // Get the raw markdown content
+            const content = testContainer.getAttribute('data-original-content') || testContainer.textContent;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(content).then(() => {
+                // Show success notification
+                const copyButton = document.getElementById('copy-button');
+                const originalHTML = copyButton.innerHTML;
+                
+                copyButton.innerHTML = '<i class="bi bi-check"></i>';
+                copyButton.classList.add('btn-success');
+                copyButton.classList.remove('btn-outline-secondary');
+                
+                setTimeout(() => {
+                    copyButton.innerHTML = originalHTML;
+                    copyButton.classList.remove('btn-success');
+                    copyButton.classList.add('btn-outline-secondary');
+                }, 2000);
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        // Export content as MD file
+        function exportAsMD() {
+            const testContainer = document.getElementById('test-result-content');
+            if (!testContainer) return;
+            
+            // Get the raw markdown content
+            const content = testContainer.getAttribute('data-original-content') || testContainer.textContent;
+            
+            // Create blob and download
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test-uat-${JOB_ID}.md`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 0);
+        }
+
         // Inizializza tutto quando il DOM è caricato
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM caricato, inizializzazione...');
@@ -251,8 +366,14 @@
             const testResultContent = document.getElementById('test-result-content');
             if (testResultContent) {
                 const content = testResultContent.textContent;
+                // Store the original content for later use
+                testResultContent.setAttribute('data-original-content', content);
                 testResultContent.innerHTML = marked.parse(content);
             }
+            
+            // Add event listeners for the buttons
+            document.getElementById('copy-button')?.addEventListener('click', copyToClipboard);
+            document.getElementById('export-button')?.addEventListener('click', exportAsMD);
         });
     </script>
 </th:block>
