@@ -26,6 +26,8 @@ public class TestGenerationViewController {
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("activeJobs", testGenerationService.getActiveJobs());
         model.addAttribute("completedJobs", testGenerationService.getCompletedJobs());
+        model.addAttribute("isCompactView", request.getSession().getAttribute("isCompactView") != null ? 
+                                      request.getSession().getAttribute("isCompactView") : false);
         return "views/dashboard";
     }
 
@@ -57,5 +59,14 @@ public class TestGenerationViewController {
     @ResponseBody
     public TestGenerationJob getJobStatus(@PathVariable Long id) {
         return testGenerationService.getJob(id);
+    }
+
+    @GetMapping("/toggle-view")
+    @ResponseBody
+    public String toggleView(HttpServletRequest request) {
+        Boolean currentView = (Boolean) request.getSession().getAttribute("isCompactView");
+        boolean newView = currentView == null || !currentView;
+        request.getSession().setAttribute("isCompactView", newView);
+        return "{\"isCompactView\": " + newView + "}";
     }
 } 

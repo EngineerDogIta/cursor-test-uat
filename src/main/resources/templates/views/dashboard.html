@@ -36,7 +36,8 @@
                         <h5 class="card-title mb-0">Jobs in Progress</h5>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
+                        <!-- Vista Compatta -->
+                        <div class="table-responsive" th:if="${isCompactView}">
                             <table class="table table-hover" id="active-jobs-table">
                                 <thead>
                                     <tr>
@@ -81,6 +82,53 @@
                                 </tbody>
                             </table>
                         </div>
+                        
+                        <!-- Vista Standard (Carte) -->
+                        <div class="card-grid-container" th:unless="${isCompactView}">
+                            <div class="card-grid">
+                                <div class="job-card" th:each="job : ${activeJobs}">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0" th:text="${job.jiraTicket}"></h6>
+                                            <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
+                                                   'badge bg-info text-white status-badge'}">
+                                                <i th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'bi bi-arrow-repeat status-icon spin' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'bi bi-check-circle status-icon' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'bi bi-x-circle status-icon' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'bi bi-hourglass status-icon' :
+                                                   'bi bi-question-circle status-icon'}"></i>
+                                                <span th:text="${job.status}"></span>
+                                            </span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="ticket-preview">
+                                                <p class="ticket-description" th:text="${job.description}"></p>
+                                                <div class="ticket-meta">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-clock"></i>
+                                                        <span th:text="${#temporals.format(job.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="action-buttons mt-3">
+                                                <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
+                                                    <i class="bi bi-eye"></i> Dettagli
+                                                </a>
+                                                <button th:if="${job.status != T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS}"
+                                                        class="btn btn-sm btn-danger delete-job-btn"
+                                                        th:data-job-id="${job.id}"
+                                                        th:data-ticket-id="${job.jiraTicket}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -92,7 +140,8 @@
                         <h5 class="card-title mb-0">Completed Jobs</h5>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
+                        <!-- Vista Compatta -->
+                        <div class="table-responsive" th:if="${isCompactView}">
                             <table class="table table-hover" id="completed-jobs-table">
                                 <thead>
                                     <tr>
@@ -136,6 +185,53 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <!-- Vista Standard (Carte) -->
+                        <div class="card-grid-container" th:unless="${isCompactView}">
+                            <div class="card-grid">
+                                <div class="job-card" th:each="job : ${completedJobs}">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0" th:text="${job.jiraTicket}"></h6>
+                                            <span th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'badge bg-warning text-dark status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'badge bg-success text-white status-badge' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'badge bg-danger text-white status-badge' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'badge bg-secondary text-white status-badge' :
+                                                   'badge bg-info text-white status-badge'}">
+                                                <i th:class="${job.status == T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS ? 'bi bi-arrow-repeat status-icon spin' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).COMPLETED ? 'bi bi-check-circle status-icon' : 
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).FAILED ? 'bi bi-x-circle status-icon' :
+                                                   job.status == T(com.example.model.TestGenerationJob.JobStatus).PENDING ? 'bi bi-hourglass status-icon' :
+                                                   'bi bi-question-circle status-icon'}"></i>
+                                                <span th:text="${job.status}"></span>
+                                            </span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="ticket-preview">
+                                                <p class="ticket-description" th:text="${job.description}"></p>
+                                                <div class="ticket-meta">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-clock"></i>
+                                                        <span th:text="${#temporals.format(job.completedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="action-buttons mt-3">
+                                                <a th:href="@{/job/{id}(id=${job.id})}" class="btn btn-sm btn-info">
+                                                    <i class="bi bi-eye"></i> Dettagli
+                                                </a>
+                                                <button th:if="${job.status != T(com.example.model.TestGenerationJob.JobStatus).IN_PROGRESS}"
+                                                        class="btn btn-sm btn-danger delete-job-btn"
+                                                        th:data-job-id="${job.id}"
+                                                        th:data-ticket-id="${job.jiraTicket}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -216,28 +312,24 @@
                 
                 // Toggle per la visualizzazione compatta
                 const toggleViewBtn = document.getElementById('toggle-view');
-                const tables = document.querySelectorAll('.table');
-                
-                // Ripristina lo stato della vista al caricamento
-                const isCompactView = localStorage.getItem('compact-view') === 'true';
-                if (isCompactView) {
-                    tables.forEach(table => table.classList.add('table-compact'));
-                    toggleViewBtn.innerHTML = '<i class="bi bi-list"></i> Vista standard';
-                }
-                
+
                 toggleViewBtn.addEventListener('click', function() {
-                    const isCompact = tables[0].classList.contains('table-compact');
-                    
-                    if (isCompact) {
-                        tables.forEach(table => table.classList.remove('table-compact'));
-                        this.innerHTML = '<i class="bi bi-list-ul"></i> Vista compatta';
-                        localStorage.setItem('compact-view', 'false');
-                    } else {
-                        tables.forEach(table => table.classList.add('table-compact'));
-                        this.innerHTML = '<i class="bi bi-list"></i> Vista standard';
-                        localStorage.setItem('compact-view', 'true');
-                    }
+                    fetch('/toggle-view')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Ricarica la pagina per applicare la nuova vista
+                            window.location.reload();
+                        })
+                        .catch(error => console.error('Error:', error));
                 });
+                
+                // Imposta il testo corretto del pulsante in base allo stato attuale
+                const isCompactView = /*[[${isCompactView}]]*/ false;
+                if (isCompactView) {
+                    toggleViewBtn.innerHTML = '<i class="bi bi-list"></i> Vista standard';
+                } else {
+                    toggleViewBtn.innerHTML = '<i class="bi bi-grid"></i> Vista compatta';
+                }
                 
                 // Animazione di rotazione per icone di jobs in progress
                 const style = document.createElement('style');
