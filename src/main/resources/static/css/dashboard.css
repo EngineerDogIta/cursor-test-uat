@@ -76,12 +76,7 @@ th.sortable.desc:after {
 
 /* View toggle buttons */
 .view-toggle {
-    margin-bottom: 10px;
-}
-
-.view-toggle .btn {
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
+    margin-bottom: 0;  /* Allineamento verticale con New Ticket */
 }
 
 /* Stile per il tooltip di ordinamento */
