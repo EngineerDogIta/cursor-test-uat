@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: spring-ai-ollama-demo
   ai:
     ollama:
       base-url: ${OLLAMA_HOST:http://localhost:11434}
@@ -32,8 +34,10 @@ spring:
           type: linear
           factor: 2.0
   datasource:
-    url: jdbc:sqlite:data/test_generation.db?journal_mode=WAL&foreign_keys=on
+    url: jdbc:sqlite:data/test_generation.db
     driver-class-name: org.sqlite.JDBC
+    username:
+    password:
     hikari:
       maximum-pool-size: 1
       minimum-idle: 1
@@ -46,11 +50,15 @@ spring:
       leak-detection-threshold: 60000
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.community.dialect.SQLiteDialect
         connection:
           provider_disables_autocommit: true
+          foreign_keys: true
         jdbc:
           batch_size: 30
           batch_versioned_data: true
@@ -59,65 +67,37 @@ spring:
         generate_statistics: false
         format_sql: true
 
-test:
-  generation:
-    max-attempts: 3
-    acceptable-quality-levels:
-      - QUALITY_HIGH
-      - QUALITY_MEDIUM
-    validation:
-      base-prompt: |
-        Validate UAT test cases quality. Use ONLY these exact keywords in responses:
-        QUALITY_HIGH, QUALITY_MEDIUM, QUALITY_LOW
-        SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW
-        
-        Format response exactly as:
-        
-        OVERALL_QUALITY: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
-        
-        METRICS:
-        - Coherence: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
-        - Completeness: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
-        - Clarity: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
-        - TestData: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
-        - Coverage: [QUALITY_HIGH|QUALITY_MEDIUM|QUALITY_LOW]
-        
-        ISSUES:
-        1. Type: [issue] 
-           Severity: [SEVERITY_HIGH|SEVERITY_MEDIUM|SEVERITY_LOW]
-           Fix: [suggestion]
-           Impact: [brief description of the issue impact]
-        
-        RECOMMENDATIONS:
-        1. [specific recommendation to improve test cases]
-        2. [another recommendation]
-      detailed-prompt: |
-        Perform technical validation using ONLY these keywords:
-        TECH_HIGH, TECH_MEDIUM, TECH_LOW
-        RISK_HIGH, RISK_MEDIUM, RISK_LOW
-        
-        Format response exactly as:
-        
-        TECHNICAL_SCORE: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
-        
-        ASPECTS:
-        - Coverage: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
-        - ErrorHandling: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
-        - Security: [TECH_HIGH|TECH_MEDIUM|TECH_LOW]
-        
-        RISKS:
-        1. Area: [risk area]
-           Level: [RISK_HIGH|RISK_MEDIUM|RISK_LOW]
-           Action: [mitigation]
-           Priority: [implementation priority]
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.example: DEBUG
+    com.zaxxer.hikari: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
 
+# Application specific properties
+# test:
+#   generation:
+#     # Removed max-attempts and acceptable-quality-levels
+#     # Removed validation section
+
+# Server Configuration
 server:
   port: 8080
 
-logging:
-  level:
-    com.example: INFO
-    com.zaxxer.hikari: INFO
-    org.hibernate.SQL: INFO
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+# Async Executor Configuration
+app:
+  async:
+    corePoolSize: 2
+    maxPoolSize: 5
+    queueCapacity: 10
+    threadNamePrefix: TestGenTask-
+
+# Info endpoint configuration (optional)
+info:
+  app:
+    name: ${spring.application.name}
+    description: Spring AI Demo Application with Ollama Integration
+    version: "@project.version@"
  

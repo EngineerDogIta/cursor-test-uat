@@ -1,9 +1,11 @@
 package com.example.service;
 
 import com.example.agent.TestGeneratorAgent;
-import com.example.agent.TestValidatorAgent;
-import com.example.agent.ITicketAnalyzer;
-import com.example.config.TestGenerationProperties;
+// Remove unused imports for ValidatorAgent, TicketAnalyzer, MetricsAnalysisService
+// import com.example.agent.TestValidatorAgent;
+// import com.example.agent.ITicketAnalyzer;
+// import com.example.services.MetricsAnalysisService;
+// import com.example.config.TestGenerationProperties;
 import com.example.dto.TicketContentDto;
 import com.example.model.TestGenerationJob;
 import com.example.repository.TestGenerationJobRepository;
@@ -17,164 +19,193 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+// Remove unused import for List and Map if not used elsewhere after refactor
 
 @Service
 public class TestGenerationService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(TestGenerationService.class);
-    
-    private final ITicketAnalyzer ticketAnalyzer;
+
+    // Remove unused dependencies
+    // private final ITicketAnalyzer ticketAnalyzer;
     private final TestGeneratorAgent testGenerator;
-    private final TestValidatorAgent testValidator;
+    // private final TestValidatorAgent testValidator;
     private final TestGenerationJobRepository testGenerationRepository;
     private final com.example.services.JobLogService jobLogService;
-    private final com.example.services.MetricsAnalysisService metricsAnalysisService;
-    private final TestGenerationProperties properties;
+    // private final com.example.services.MetricsAnalysisService metricsAnalysisService;
+    // private final TestGenerationProperties properties;
 
     @Autowired
     public TestGenerationService(
-            ITicketAnalyzer ticketAnalyzer,
+            // Remove ITicketAnalyzer from constructor
             TestGeneratorAgent testGenerator,
-            TestValidatorAgent testValidator,
+            // Remove TestValidatorAgent from constructor
             TestGenerationJobRepository testGenerationRepository,
-            com.example.services.JobLogService jobLogService,
-            com.example.services.MetricsAnalysisService metricsAnalysisService,
-            TestGenerationProperties properties) {
-        this.ticketAnalyzer = ticketAnalyzer;
+            com.example.services.JobLogService jobLogService
+            // Remove MetricsAnalysisService from constructor
+            // Remove TestGenerationProperties from constructor
+            ) {
+        // this.ticketAnalyzer = ticketAnalyzer;
         this.testGenerator = testGenerator;
-        this.testValidator = testValidator;
+        // this.testValidator = testValidator;
         this.testGenerationRepository = testGenerationRepository;
         this.jobLogService = jobLogService;
-        this.metricsAnalysisService = metricsAnalysisService;
-        this.properties = properties;
+        // this.metricsAnalysisService = metricsAnalysisService;
+        // this.properties = properties;
     }
 
     @Async("taskExecutor")
     public void startTestGeneration(TicketContentDto ticketDto) {
+        TestGenerationJob job = null; // Initialize job to null
         try {
-            TestGenerationJob job = new TestGenerationJob();
-            job.setJiraTicket(ticketDto.getTicketId());
-            job.setDescription(ticketDto.getContent());
-            job.setComponents(String.join(", ", ticketDto.getComponents()));
+            job = new TestGenerationJob();
+            job.setJiraTicket(ticketDto.getTicketId()); // Assuming getTicketId() exists
+            job.setDescription(ticketDto.getContent()); // Assuming getContent() exists
+            // Components might be null or empty, handle gracefully
+            if (ticketDto.getComponents() != null && !ticketDto.getComponents().isEmpty()) {
+                job.setComponents(String.join(", ", ticketDto.getComponents()));
+            } else {
+                job.setComponents("N/A"); // Or set to null or empty string as appropriate
+            }
             job.setStatus(TestGenerationJob.JobStatus.PENDING);
             job.setCreatedAt(LocalDateTime.now());
-            testGenerationRepository.saveAndFlush(job);
-            
-            jobLogService.addJobLog(job, "INFO", "Starting test generation process for ticket: " + ticketDto.getTicketId());
-            jobLogService.addJobLog(job, "INFO", "Job created with ID: " + job.getId());
-            jobLogService.addJobLog(job, "INFO", "Components involved: " + job.getComponents());
-            
-            jobLogService.addJobLog(job, "INFO", "Standard test generation process started");
-            processTestGeneration(job.getId(), ticketDto);
+            // Save the initial job state
+            job = testGenerationRepository.saveAndFlush(job);
+            final Long currentJobId = job.getId(); // Use final variable for lambda/inner class if needed
+
+            jobLogService.addJobLog(job, "INFO", "Job created with ID: " + currentJobId + " for ticket: " + ticketDto.getTicketId());
+            jobLogService.addJobLog(job, "INFO", "Components: " + job.getComponents());
+
+            // Trigger the simplified processing method
+            processTestGeneration(currentJobId, ticketDto.getContent());
+
         } catch (Exception e) {
-            logger.error("Error starting test generation with ticketDto " + ticketDto, e);
+            logger.error("Error starting test generation for ticket: {}", ticketDto.getTicketId(), e);
+            // If job was created before exception, update its status to FAILED
+            if (job != null && job.getId() != null) {
+                failJob(job.getId(), "Error during startup: " + e.getMessage());
+                jobLogService.addJobLog(job, "ERROR", "Failed to start processing: " + e.getMessage());
+            } else {
+                // Log failure even if job wasn't saved
+                logger.error("Failed to create or save job for ticket: {}", ticketDto.getTicketId());
+            }
         }
     }
 
     @Async("taskExecutor")
-    protected void processTestGeneration(Long jobId, TicketContentDto ticketDto) {
+    protected void processTestGeneration(Long jobId, String ticketContent) {
+        TestGenerationJob job = null;
         try {
-            TestGenerationJob job = testGenerationRepository.findById(jobId).orElseThrow();
-            
-            jobLogService.addJobLog(job, "INFO", "Starting ticket analysis");
-            String ticketAnalysis;
-            
-            if (ticketDto != null) {
-                jobLogService.addJobLog(job, "DEBUG", "Ticket content: " + ticketDto.getContent());
-                ticketAnalysis = ticketAnalyzer.analyzeTicket(ticketDto);
-            } else {
-                java.util.List<String> components = (job.getComponents() != null && !job.getComponents().isEmpty())
-                    ? java.util.List.of(job.getComponents().split("\\s+"))
-                    : java.util.List.of();
-                TicketContentDto jobTicketDto = new TicketContentDto.Builder()
-                        .setContent(job.getDescription())
-                        .setTicketId(job.getJiraTicket())
-                        .setComponents(components)
-                        .build();
-                ticketAnalysis = ticketAnalyzer.analyzeTicket(jobTicketDto);
-            }
-            
-            jobLogService.addJobLog(job, "INFO", "Ticket analysis completed");
-            jobLogService.addJobLog(job, "DEBUG", "Analysis result:\n" + ticketAnalysis);
-            
+            job = testGenerationRepository.findById(jobId)
+                    .orElseThrow(() -> new RuntimeException("Job not found with id: " + jobId));
+
+            jobLogService.addJobLog(job, "INFO", "Processing job ID: " + jobId);
             job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
             testGenerationRepository.save(job);
             jobLogService.addJobLog(job, "INFO", "Job status updated to IN_PROGRESS");
-            
-            String generatedTests = null;
-            String validationResults = null;
-            boolean testsValidated = false;
-            int attempts = 0;
-            java.util.List<String> qualityHistory = new java.util.ArrayList<>();
-            
-            while (!testsValidated && attempts < properties.getMaxAttempts()) {
-                attempts++;
-                jobLogService.addJobLog(job, "INFO", "Starting iteration " + attempts + " of " + properties.getMaxAttempts());
-                
-                String enhancedPrompt = "";
-                if (attempts > 1 && validationResults != null) {
-                    enhancedPrompt = metricsAnalysisService.analyzeValidationAndEnhancePrompt(validationResults);
-                    jobLogService.addJobLog(job, "INFO", "Generated structured improvement analysis");
-                    jobLogService.addJobLog(job, "DEBUG", "Improvement analysis:\n" + enhancedPrompt);
-                    
-                    // Log specific sections for better traceability
-                    String[] sections = enhancedPrompt.split("\n## ");
-                    for (String section : sections) {
-                        if (section.startsWith("Quality Metrics") || 
-                            section.startsWith("Required Improvements") || 
-                            section.startsWith("Specific Issues") ||
-                            section.startsWith("Technical Recommendations")) {
-                            jobLogService.addJobLog(job, "INFO", "Section: " + section.split("\n")[0]);
-                        }
-                    }
-                }
-                
-                jobLogService.addJobLog(job, "INFO", "Starting test generation with enhanced context");
-                generatedTests = testGenerator.generateTests(ticketAnalysis, enhancedPrompt);
-                jobLogService.addJobLog(job, "INFO", "Test generation completed");
-                jobLogService.addJobLog(job, "DEBUG", "Generated tests:\n" + generatedTests);
-                
-                jobLogService.addJobLog(job, "INFO", "Starting test validation");
-                validationResults = testValidator.validateTests(ticketAnalysis, generatedTests);
-                jobLogService.addJobLog(job, "INFO", "Test validation completed");
-                jobLogService.addJobLog(job, "DEBUG", "Validation results:\n" + validationResults);
-                
-                String overallQuality = metricsAnalysisService.extractOverallQuality(validationResults);
-                qualityHistory.add(overallQuality);
-                
-                testsValidated = properties.getAcceptableQualityLevels().contains(overallQuality);
-                
-                if (!testsValidated && attempts < properties.getMaxAttempts()) {
-                    jobLogService.addJobLog(job, "WARN", "Test quality needs improvement (Quality: " + overallQuality + ")");
-                    jobLogService.addJobLog(job, "INFO", "Preparing for next iteration with structured improvements");
-                }
+
+            // Remove ticket analysis step
+            // jobLogService.addJobLog(job, "INFO", "Starting ticket analysis");
+            // String ticketAnalysis = ticketAnalyzer.analyzeTicket(...);
+            // jobLogService.addJobLog(job, "INFO", "Ticket analysis completed");
+
+            // Remove iterative loop and validation
+            // while (!testsValidated && attempts < properties.getMaxAttempts()) { ... }
+
+            jobLogService.addJobLog(job, "INFO", "Calling Test Generator Agent directly with ticket content.");
+            // Direct call to the simplified TestGeneratorAgent method
+            String generatedTests = testGenerator.generateTests(ticketContent);
+            jobLogService.addJobLog(job, "INFO", "Test Generator Agent finished.");
+
+            // Check if the generator returned an error message (simple check)
+            if (generatedTests != null && generatedTests.startsWith("Error:")) {
+                logger.error("Test Generation Agent returned an error for job {}: {}", jobId, generatedTests);
+                jobLogService.addJobLog(job, "ERROR", "Test Generation failed: " + generatedTests);
+                failJob(jobId, generatedTests);
+                return; // Stop processing
             }
-            
-            if (testsValidated) {
-                jobLogService.addJobLog(job, "INFO", "Tests validated successfully");
-                jobLogService.addJobLog(job, "INFO", "Quality progression: " + String.join(" → ", qualityHistory));
-                String finalResult = generatedTests;
-                job.setTestResult(finalResult);
-                testGenerationRepository.saveAndFlush(job);
-                completeJob(job.getId());
-            } else {
-                String errorMsg = "Test quality did not meet requirements after " + properties.getMaxAttempts() + " iterations";
-                jobLogService.addJobLog(job, "ERROR", errorMsg);
-                jobLogService.addJobLog(job, "INFO", "Quality progression: " + String.join(" → ", qualityHistory));
-                testGenerationRepository.saveAndFlush(job);
-                throw new RuntimeException(errorMsg);
-            }
+
+            jobLogService.addJobLog(job, "DEBUG", "Generated tests:\n" + generatedTests);
+
+            // Immediately save the result and complete the job
+            job.setTestResult(generatedTests);
+            jobLogService.addJobLog(job, "INFO", "Successfully generated tests.");
+            completeJob(jobId); // Use the existing completeJob method
+
         } catch (Exception e) {
-            logger.error("Error during test generation process for jobId: " + jobId, e);
-            TestGenerationJob job = testGenerationRepository.findById(jobId).orElseThrow();
-            job.setStatus(TestGenerationJob.JobStatus.FAILED);
-            job.setErrorMessage(e.getMessage());
-            job.setCompletedAt(LocalDateTime.now());
-            testGenerationRepository.save(job);
-            jobLogService.addJobLog(job, "ERROR", "Process failed: " + e.getMessage());
+            logger.error("Error during simplified test generation process for jobId: {}", jobId, e);
+            // Ensure job is marked as failed if an exception occurs
+            if (jobId != null) {
+                String errorMessage = (e.getMessage() != null) ? e.getMessage() : "Unknown error";
+                failJob(jobId, "Process failed: " + errorMessage);
+                if (job != null) { // Log only if job object was retrieved
+                   jobLogService.addJobLog(job, "ERROR", "Process failed unexpectedly: " + errorMessage);
+                }
+            }
         }
     }
 
+    // Helper method to fail a job
+    private void failJob(Long jobId, String errorMessage) {
+        try {
+            TestGenerationJob job = testGenerationRepository.findById(jobId)
+                    .orElseThrow(() -> new RuntimeException("Attempted to fail non-existent job: " + jobId));
+            job.setStatus(TestGenerationJob.JobStatus.FAILED);
+            job.setErrorMessage(errorMessage);
+            job.setCompletedAt(LocalDateTime.now());
+            testGenerationRepository.save(job);
+            logger.warn("Job {} marked as FAILED. Reason: {}", jobId, errorMessage);
+        } catch (Exception ex) {
+            logger.error("Critical error: Failed to update job {} status to FAILED. Reason: {}", jobId, ex.getMessage(), ex);
+        }
+    }
+
+    // Existing completeJob method (ensure it's still appropriate)
+    private void completeJob(Long jobId) {
+        TestGenerationJob job = getJob(jobId); // Relies on getJob method
+        jobLogService.addJobLog(job, "INFO", "Completing job successfully.");
+        job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
+        job.setCompletedAt(LocalDateTime.now());
+        job.setErrorMessage(null); // Clear any previous error message
+        testGenerationRepository.saveAndFlush(job); // Ensure changes are persisted
+        jobLogService.addJobLog(job, "INFO", "Job completed and saved.");
+    }
+
+    // Keep other methods like getJobStatus, getActiveJobs, getCompletedJobs, getJob, createJob (review if still needed), deleteJob
+
+    // Review createJob: It seems to call the old processTestGeneration with null DTO.
+    // This might need adjustment or removal depending on how jobs are now initiated.
+    // If startTestGeneration is the sole entry point, createJob might be redundant or need refactoring.
+    @Transactional
+    public TestGenerationJob createJob(TestGenerationJob job) {
+        // This method seems designed for manual job creation and immediate processing.
+        // With the new flow relying on startTestGeneration(TicketContentDto), its purpose is unclear.
+        // It calls processTestGeneration(job.getId(), null), which now expects a String ticketContent.
+        // This will likely fail or produce incorrect results.
+        // Recommendation: Deprecate or remove this method unless there's a specific use case
+        // for creating jobs without initial TicketContentDto and processing them later (which the current code doesn't support well).
+        logger.warn("createJob method is potentially deprecated due to refactoring. Review its usage.");
+
+        // For now, let's save the job but log a warning and avoid triggering processing.
+        job.setStatus(TestGenerationJob.JobStatus.PENDING); // Start as pending
+        job.setCreatedAt(LocalDateTime.now());
+        job = testGenerationRepository.saveAndFlush(job);
+        logger.info("Job created manually with ID: {}. Note: Automatic processing from this method is disabled.", job.getId());
+        jobLogService.addJobLog(job, "WARN", "Job created via createJob method. Automatic processing not triggered. Use startTestGeneration instead.");
+
+        // // Original async processing call (commented out due to incompatibility)
+        // try {
+        //     processTestGeneration(job.getId(), null); // This needs ticketContent String now
+        // } catch (Exception e) {
+        //     logger.error("Error trying to start processing for manually created job {}: {}", job.getId(), e.getMessage());
+        //     failJob(job.getId(), "Error starting process: " + e.getMessage());
+        // }
+
+        return job;
+    }
+
+    // getJobStatus, getActiveJobs, getCompletedJobs, getJob, deleteJob remain largely unchanged
+    // ... (keep existing methods from getJobStatus downwards) ...
     
     public Map<String, Object> getJobStatus(String jobId) {
         try {
@@ -219,49 +250,11 @@ public class TestGenerationService {
     }
 
     @Transactional
-    public TestGenerationJob createJob(TestGenerationJob job) {        
-        // Salva il job e assicurati che la transazione sia completata
-        job = testGenerationRepository.save(job);
-        testGenerationRepository.flush(); // Forza il flush della transazione
-        
-        logger.info("Job created with ID: {} and saved in the database", job.getId());
-        
-        // Avvia l'elaborazione in modo asincrono solo dopo che il job è stato salvato
-        try {
-            processTestGeneration(job.getId(), null);
-        } catch (Exception e) {
-            logger.error("Error starting asynchronous process for job {}: {}", job.getId(), e.getMessage());
-            // Aggiorna lo stato del job in caso di errore
-            job.setStatus(TestGenerationJob.JobStatus.FAILED);
-            job.setErrorMessage("Error starting process: " + e.getMessage());
-            job.setCompletedAt(LocalDateTime.now());
-            testGenerationRepository.save(job);
-        }
-        
-        return job;
-    }
-
-    private void completeJob(Long jobId) {
-        TestGenerationJob job = getJob(jobId);
-        jobLogService.addJobLog(job, "INFO", "Completing job");
-        job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
-        job.setCompletedAt(LocalDateTime.now());
-        testGenerationRepository.saveAndFlush(job);
-        jobLogService.addJobLog(job, "INFO", "Job completed successfully");
-    }
-
-    @Transactional
     public void deleteJob(Long jobId) {
-        TestGenerationJob job = testGenerationRepository.findById(jobId)
-            .orElseThrow(() -> new RuntimeException("Job non trovato: " + jobId));
-        
-        // Verifica solo che il job non sia in esecuzione
-        if (job.getStatus() == TestGenerationJob.JobStatus.IN_PROGRESS) {
-            throw new RuntimeException("Impossibile eliminare un job in esecuzione");
-        }
-        
-        // Elimina il job e i suoi log (cascade delete)
+        TestGenerationJob job = getJob(jobId);
+        // Consider adding logic to delete associated logs if JobLogService supports it
+        // jobLogService.deleteLogsForJob(jobId);
         testGenerationRepository.delete(job);
-        logger.info("Job {} eliminato con successo", jobId);
+        logger.info("Deleted job with ID: {}", jobId);
     }
 } 
