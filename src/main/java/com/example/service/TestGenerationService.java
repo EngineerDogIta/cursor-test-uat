@@ -101,44 +101,37 @@ public class TestGenerationService {
 
             jobLogService.addJobLog(job, "INFO", "Processing job ID: " + jobId);
             job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
-            testGenerationRepository.save(job);
+            testGenerationRepository.save(job); // Save IN_PROGRESS status
             jobLogService.addJobLog(job, "INFO", "Job status updated to IN_PROGRESS");
 
-            // Remove ticket analysis step
-            // jobLogService.addJobLog(job, "INFO", "Starting ticket analysis");
-            // String ticketAnalysis = ticketAnalyzer.analyzeTicket(...);
-            // jobLogService.addJobLog(job, "INFO", "Ticket analysis completed");
-
-            // Remove iterative loop and validation
-            // while (!testsValidated && attempts < properties.getMaxAttempts()) { ... }
-
             jobLogService.addJobLog(job, "INFO", "Calling Test Generator Agent directly with ticket content.");
-            // Direct call to the simplified TestGeneratorAgent method
             String generatedTests = testGenerator.generateTests(ticketContent);
             jobLogService.addJobLog(job, "INFO", "Test Generator Agent finished.");
 
-            // Check if the generator returned an error message (simple check)
             if (generatedTests != null && generatedTests.startsWith("Error:")) {
                 logger.error("Test Generation Agent returned an error for job {}: {}", jobId, generatedTests);
                 jobLogService.addJobLog(job, "ERROR", "Test Generation failed: " + generatedTests);
-                failJob(jobId, generatedTests);
-                return; // Stop processing
+                failJob(jobId, generatedTests); // Use failJob for error path
+                return;
             }
 
             jobLogService.addJobLog(job, "DEBUG", "Generated tests:\n" + generatedTests);
 
-            // Immediately save the result and complete the job
+            // Set result and complete the job directly here
             job.setTestResult(generatedTests);
             jobLogService.addJobLog(job, "INFO", "Successfully generated tests.");
-            completeJob(jobId); // Use the existing completeJob method
+            job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
+            job.setCompletedAt(LocalDateTime.now());
+            job.setErrorMessage(null); // Clear any previous error message
+            testGenerationRepository.saveAndFlush(job); // Save final state including result
+            jobLogService.addJobLog(job, "INFO", "Job completed and saved.");
 
         } catch (Exception e) {
             logger.error("Error during simplified test generation process for jobId: {}", jobId, e);
-            // Ensure job is marked as failed if an exception occurs
             if (jobId != null) {
                 String errorMessage = (e.getMessage() != null) ? e.getMessage() : "Unknown error";
-                failJob(jobId, "Process failed: " + errorMessage);
-                if (job != null) { // Log only if job object was retrieved
+                failJob(jobId, "Process failed: " + errorMessage); // Use failJob for exception path
+                if (job != null) {
                    jobLogService.addJobLog(job, "ERROR", "Process failed unexpectedly: " + errorMessage);
                 }
             }
@@ -155,20 +148,13 @@ public class TestGenerationService {
             job.setCompletedAt(LocalDateTime.now());
             testGenerationRepository.save(job);
             logger.warn("Job {} marked as FAILED. Reason: {}", jobId, errorMessage);
+            // Add log entry for failure completion
+             if (job != null) { // Log only if job object exists
+                jobLogService.addJobLog(job, "INFO", "Job failed and saved.");
+             }
         } catch (Exception ex) {
             logger.error("Critical error: Failed to update job {} status to FAILED. Reason: {}", jobId, ex.getMessage(), ex);
         }
-    }
-
-    // Existing completeJob method (ensure it's still appropriate)
-    private void completeJob(Long jobId) {
-        TestGenerationJob job = getJob(jobId); // Relies on getJob method
-        jobLogService.addJobLog(job, "INFO", "Completing job successfully.");
-        job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
-        job.setCompletedAt(LocalDateTime.now());
-        job.setErrorMessage(null); // Clear any previous error message
-        testGenerationRepository.saveAndFlush(job); // Ensure changes are persisted
-        jobLogService.addJobLog(job, "INFO", "Job completed and saved.");
     }
 
     // Keep other methods like getJobStatus, getActiveJobs, getCompletedJobs, getJob, createJob (review if still needed), deleteJob
