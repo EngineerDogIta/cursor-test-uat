@@ -1,0 +1,38 @@
+# Build output
+target/
+!target/*.jar
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+.factorypath
+
+# Build tools
+.gradle/
+build/
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs e file temporanei
+logs/
+*.log
+*.tmp
+*.temp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Test e documentazione
+README.md
+CHANGELOG.md
+docs/
+test/ 

@@ -1,0 +1,64 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# .cursorrules - Java/Maven Project Guidelines
+
+## Overall Principles
+- Adhere to DRY (Don't Repeat Yourself), KISS (Keep It Simple, Stupid), and SOLID principles.
+- Prioritize readability and maintainability.
+- Follow standard Java conventions and idioms.
+
+## Naming Conventions
+- Use `camelCase` for variables and method names (e.g., `myVariable`, `calculateValue`).
+- Use `PascalCase` for class and interface names (e.g., `UserService`, `RequestHandler`).
+- Use `UPPER_SNAKE_CASE` for constants (e.g., `MAX_RETRIES`).
+- Choose descriptive names that clearly indicate purpose. Avoid overly short or cryptic names.
+- For boolean variables/methods, prefer names like `isEnabled`, `hasPermission`, `isValid`.
+
+## Class and Interface Design
+- Aim for single responsibility per class.
+- Keep classes focused and cohesive.
+- Prefer composition over inheritance where appropriate.
+- Use interfaces to define contracts.
+
+## Method Design
+- Methods should ideally perform one logical operation.
+- Keep methods concise. If a method becomes too long or complex, consider refactoring it into smaller, private helper methods.
+- Limit the number of parameters (aim for 4 or fewer). Consider using Parameter Objects or Builder patterns for methods requiring many inputs.
+- Minimize side effects where possible. Clearly document methods that have side effects.
+
+## Java Specifics
+- Use standard Java libraries and features appropriately.
+- Leverage Lombok annotations (`@Data`, `@Value`, `@Builder`, `@Slf4j`, etc.) consistently where configured (`lombok.config`) to reduce boilerplate, but ensure the generated code remains understandable.
+- Use the `final` keyword for fields, parameters, and variables that should not be reassigned.
+- Prefer enhanced `for` loops (`for (Type element : collection)`) over traditional index-based loops when iterating collections, unless index access is required.
+- Handle exceptions explicitly using `try-catch-finally` blocks or declare them using `throws`. Avoid catching generic `Exception` or `Throwable` unless necessary and justified.
+- Use specific exception types.
+- Use Java Streams API for collection processing where it enhances readability.
+
+## Formatting
+- Adhere to standard Java formatting conventions (e.g., consistent indentation, spacing). If using a specific formatter profile (like Google Java Style, or a custom IntelliJ/Eclipse profile), mention it here for the AI to follow.
+- Use braces `{}` even for single-line `if`, `for`, `while` statements.
+
+## Documentation (JavaDoc)
+- Add JavaDoc comments (`/** ... */`) for all public classes, interfaces, methods, and non-obvious public fields.
+- Explain the purpose, parameters (`@param`), return values (`@return`), and exceptions thrown (`@throws`).
+- Focus on *why* something is done, not just *what* is done, especially for complex logic.
+- Keep documentation synchronized with code changes.
+
+## Testing (Assumes JUnit/Mockito common with Maven)
+- When generating new business logic (e.g., in service classes), include corresponding unit tests.
+- Use JUnit for test structure (`@Test`, `@BeforeEach`, etc.).
+- Use Mockito or a similar framework for mocking dependencies.
+- Test public methods, covering typical use cases, edge cases, and potential error conditions.
+- Aim for clear and descriptive test method names (e.g., `testCalculateDiscount_withValidInputs_shouldReturnCorrectDiscount`).
+
+## Maven (`pom.xml`)
+- Keep `pom.xml` organized. Group related dependencies.
+- Specify dependency versions explicitly or manage them via `<dependencyManagement>`. Avoid relying solely on transitive dependency versions where possible stability issues arise.
+
+## Docker (`Dockerfile`, `docker-compose.yml`)
+- Follow Dockerfile best practices (e.g., minimize layers, use specific base images, multi-stage builds for smaller final images).
+- Ensure Docker configurations align with the application's needs (ports, volumes, environment variables).
