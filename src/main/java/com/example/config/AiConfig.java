@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AiConfig {
 
-    @Value("${spring.ai.ollama.base-url:http://localhost:11434}")
     private final String ollamaBaseUrl;
 
     @Autowired

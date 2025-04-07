@@ -180,30 +180,6 @@ public class TestGenerationService {
     }
 
     /**
-     * Retrieves all active (PENDING or IN_PROGRESS) jobs.
-     *
-     * @return A list of active TestGenerationJob entities.
-     */
-    public List<TestGenerationJob> getActiveJobs() {
-        return testGenerationRepository.findByStatusIn(List.of(
-            TestGenerationJob.JobStatus.PENDING,
-            TestGenerationJob.JobStatus.IN_PROGRESS
-        ));
-    }
-
-    /**
-     * Retrieves all completed (COMPLETED or FAILED) jobs.
-     *
-     * @return A list of completed TestGenerationJob entities.
-     */
-    public List<TestGenerationJob> getCompletedJobs() {
-        return testGenerationRepository.findByStatusIn(List.of(
-            TestGenerationJob.JobStatus.COMPLETED,
-            TestGenerationJob.JobStatus.FAILED
-        ));
-    }
-
-    /**
      * Retrieves a specific job by its ID.
      *
      * @param id The job ID.
@@ -213,21 +189,6 @@ public class TestGenerationService {
     public TestGenerationJob getJob(final Long id) {
         return testGenerationRepository.findById(id)
             .orElseThrow(() -> new JobNotFoundException("Job not found with id: " + id)); // Throw JobNotFoundException
-    }
-
-    /**
-     * Creates a job record manually.
-     * Note: This method is potentially deprecated and does not trigger processing.
-     *
-     * @param job The job entity to create (status and dates will be set).
-     * @return The persisted TestGenerationJob entity.
-     */
-    @Transactional
-    public TestGenerationJob createJob(final TestGenerationJob job) {
-        // Implementation of createJob method
-        // This method is not provided in the original file or the new code block
-        // It's assumed to exist as it's called in the deleteJob method
-        return null; // Placeholder return, actual implementation needed
     }
 
     /**

@@ -53,9 +53,4 @@ public class TestGenerationJob {
         COMPLETED,
         FAILED
     }
-
-    public void addLog(JobLog log) {
-        this.logs.add(log);
-        log.setJob(this);
-    }
 } 
