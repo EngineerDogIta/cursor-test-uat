@@ -1,8 +1,8 @@
 spring:
   ai:
     ollama:
-      base-url: http://localhost:11434
-      model: gemma3:1b
+      base-url: ${OLLAMA_HOST:http://localhost:11434}
+      model: mistral
       options:
         temperature: 1.0
         top_p: 0.95

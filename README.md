@@ -1,43 +1,62 @@
-# Spring AI Ollama Demo
+# Spring AI Application with Test Generation and Jira Integration
 
-Questo è un progetto demo che utilizza Spring AI per interagire con il modello Gemma:4b attraverso Ollama.
+This project demonstrates using Spring AI to interact with LLMs via Ollama for various tasks, including chat, automated test generation, AI-driven test validation, and Jira integration.
 
-## Prerequisiti
+## Features
 
-- Java 17 o superiore
-- Maven
-- Ollama installato e in esecuzione localmente
-- Modello Gemma:4b scaricato in Ollama
+*   **AI Chat:** Basic chat functionality via a REST endpoint (`/chat`).
+*   **Test Generation:** Automated generation of test cases (e.g., UAT).
+*   **Test Validation:** AI-powered analysis and validation of generated test cases based on configurable quality metrics and prompts.
+*   **Jira Integration:** Functionality to interact with Jira (details TBC).
+*   **Persistence:** Uses a SQLite database (`data/test_generation.db`) to store relevant data.
 
-## Configurazione
+## Prerequisites
 
-1. Assicurati che Ollama sia in esecuzione localmente sulla porta 11434
-2. Scarica il modello Gemma:4b usando il comando:
-   ```bash
-   ollama pull gemma:4b
-   ```
+*   Java 17 or higher
+*   Maven
+*   Ollama installed and running locally (See [Ollama Website](https://ollama.com/))
+*   An Ollama model downloaded (defaults to `mistral`). Pull it using:
+    ```bash
+    ollama pull mistral
+    ```
+    *(Note: The model can be changed in `application.yml`)*
 
-## Compilazione e Esecuzione
+## Configuration
 
-1. Compila il progetto:
-   ```bash
-   mvn clean package
-   ```
+1.  **Ollama:** Ensure Ollama is running. By default, the application connects to `http://localhost:11434`. This can be overridden using the `OLLAMA_HOST` environment variable or by modifying `spring.ai.ollama.base-url` in `src/main/resources/application.yml`.
+2.  **Model:** The default model is `mistral`. You can configure the model name and its parameters (`temperature`, `top_p`, etc.) under `spring.ai.ollama` in `src/main/resources/application.yml`.
+3.  **Database:** The application uses a SQLite database located at `data/test_generation.db` by default. The path can be changed in `application.yml` under `spring.datasource.url`.
+4.  **Application Settings:** Other settings, like test generation parameters and validation prompts, are also configurable in `application.yml`.
 
-2. Esegui l'applicazione:
-   ```bash
-   java -jar target/spring-ai-ollama-demo-0.0.1-SNAPSHOT.jar
-   ```
+## Compiling and Running
 
-## Utilizzo
+1.  **Compile:**
+    ```bash
+    ./mvnw clean package
+    # or mvn clean package if you have Maven installed globally
+    ```
 
-L'applicazione espone un endpoint REST `/chat` che accetta richieste POST con un messaggio di testo.
+2.  **Run:**
+    ```bash
+    java -jar target/spring-ai-ollama-demo-*.jar
+    ```
+    *(Replace `*` with the actual version)*
 
-Esempio di utilizzo con curl:
-```bash
-curl -X POST -H "Content-Type: text/plain" -d "Ciao, come stai?" http://localhost:8080/chat
-```
+## Usage
 
-## Configurazione
+*   **Chat Endpoint:**
+    ```bash
+    curl -X POST -H "Content-Type: text/plain" -d "Hello AI!" http://localhost:8080/chat
+    ```
+*   **Other Features:** Explore the controllers (`src/main/java/com/example/controller`) for endpoints related to test generation and Jira integration. (Further documentation on specific endpoints can be added here).
 
-Le impostazioni del modello possono essere modificate nel file `src/main/resources/application.yml`. 
+## Key Technologies
+
+*   Java 17
+*   Spring Boot 3.x
+*   Spring AI
+*   Ollama
+*   Maven
+*   SQLite
+*   Hibernate/JPA
+*   Docker (optional, for containerization - see `Dockerfile` and `docker-compose.yml`) 
