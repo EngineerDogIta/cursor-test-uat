@@ -48,7 +48,46 @@ This project demonstrates using Spring AI to interact with LLMs via Ollama for v
     ```bash
     curl -X POST -H "Content-Type: text/plain" -d "Hello AI!" http://localhost:8080/chat
     ```
-*   **Other Features:** Explore the controllers (`src/main/java/com/example/controller`) for endpoints related to test generation and Jira integration. (Further documentation on specific endpoints can be added here).
+*   **Test Generation:**
+    *   Start Asynchronous Test Generation:
+        ```bash
+        curl -X POST -H "Content-Type: application/json" -d '{
+          "content": "User should be able to login with valid credentials.",
+          "ticketId": "PROJ-123",
+          "components": ["Authentication"]
+        }' http://localhost:8080/api/generate-tests/async
+        ```
+        (This returns a `jobId`)
+    *   Check Job Status:
+        ```bash
+        # Replace {jobId} with the actual ID received from the previous step
+        curl http://localhost:8080/api/jobs/{jobId}/status
+        ```
+    *   Get Test Result:
+        ```bash
+        # Replace {jobId} with the actual ID
+        curl http://localhost:8080/api/jobs/{jobId}/test-result
+        ```
+    *   Get Job Logs:
+        ```bash
+        # Replace {jobId} with the actual ID
+        curl http://localhost:8080/api/jobs/{jobId}/logs
+        ```
+    *   Delete Job:
+        ```bash
+        # Replace {jobId} with the actual ID
+        curl -X DELETE http://localhost:8080/api/jobs/{jobId}
+        ```
+*   **Jira Integration (API):**
+    *   Test Jira API Connection:
+        ```bash
+        curl -X POST -H "Content-Type: application/json" -d '{
+          "serverUrl": "https://your-jira-instance.atlassian.net",
+          "username": "your-email@example.com",
+          "apiToken": "your-api-token"
+        }' http://localhost:8080/jira/api/test-connection
+        ```
+*   **Jira Integration (Web UI):** The application also provides a web interface for connecting to Jira, searching tickets, viewing details, and importing tickets for test generation. Navigate to `/jira/connect` in your browser to start.
 
 ## Key Technologies
 
