@@ -76,12 +76,6 @@ logging:
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql: WARN
 
-# Application specific properties
-# test:
-#   generation:
-#     # Removed max-attempts and acceptable-quality-levels
-#     # Removed validation section
-
 # Server Configuration
 server:
   port: 8080
@@ -100,4 +94,9 @@ info:
     name: ${spring.application.name}
     description: Spring AI Demo Application with Ollama Integration
     version: "@project.version@"
+
+# Application specific properties
+api:
+  security:
+    key: "YOUR_SECURE_API_KEY_HERE" # TODO: Replace with a strong, securely managed key
  

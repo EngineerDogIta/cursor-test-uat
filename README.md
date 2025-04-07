@@ -1,14 +1,12 @@
-# Spring AI Application with Test Generation and Jira Integration
+# Spring AI Application with Test Generation
 
-This project demonstrates using Spring AI to interact with LLMs via Ollama for various tasks, including chat, automated test generation, AI-driven test validation, and Jira integration.
+This project demonstrates using Spring AI to interact with LLMs via Ollama for various tasks, including chat and automated UAT test generation via a secured API.
 
 ## Features
 
 *   **AI Chat:** Basic chat functionality via a REST endpoint (`/chat`).
-*   **Test Generation:** Automated generation of test cases (e.g., UAT).
-*   **Test Validation:** AI-powered analysis and validation of generated test cases based on configurable quality metrics and prompts.
-*   **Jira Integration:** Functionality to interact with Jira (details TBC).
-*   **Persistence:** Uses a SQLite database (`data/test_generation.db`) to store relevant data.
+*   **UAT Test Generation API:** Asynchronously generates UAT tests from provided content (e.g., Jira ticket descriptions) via secured REST endpoints under `/api/uat/`.
+*   **Persistence:** Uses a SQLite database (`data/test_generation.db`) to store job data.
 
 ## Prerequisites
 
@@ -48,46 +46,37 @@ This project demonstrates using Spring AI to interact with LLMs via Ollama for v
     ```bash
     curl -X POST -H "Content-Type: text/plain" -d "Hello AI!" http://localhost:8080/chat
     ```
-*   **Test Generation:**
+*   **UAT Test Generation API (Requires `X-API-Key` Header):**
     *   Start Asynchronous Test Generation:
         ```bash
-        curl -X POST -H "Content-Type: application/json" -d '{
-          "content": "User should be able to login with valid credentials.",
-          "ticketId": "PROJ-123",
-          "components": ["Authentication"]
-        }' http://localhost:8080/api/generate-tests/async
+        # Replace YOUR_API_KEY with the actual key
+        curl -X POST -H "Content-Type: application/json" -H "X-API-Key: YOUR_API_KEY" -d '{ 
+          "content": "User should be able to login with valid credentials.", 
+          "ticketId": "PROJ-123", 
+          "components": ["Authentication"] 
+        }' http://localhost:8080/api/uat/generate
         ```
         (This returns a `jobId`)
     *   Check Job Status:
         ```bash
-        # Replace {jobId} with the actual ID received from the previous step
-        curl http://localhost:8080/api/jobs/{jobId}/status
+        # Replace {jobId} and YOUR_API_KEY
+        curl -H "X-API-Key: YOUR_API_KEY" http://localhost:8080/api/uat/jobs/{jobId}/status 
         ```
     *   Get Test Result:
         ```bash
-        # Replace {jobId} with the actual ID
-        curl http://localhost:8080/api/jobs/{jobId}/test-result
+        # Replace {jobId} and YOUR_API_KEY
+        curl -H "X-API-Key: YOUR_API_KEY" http://localhost:8080/api/uat/jobs/{jobId}/test-result
         ```
     *   Get Job Logs:
         ```bash
-        # Replace {jobId} with the actual ID
-        curl http://localhost:8080/api/jobs/{jobId}/logs
+        # Replace {jobId} and YOUR_API_KEY
+        curl -H "X-API-Key: YOUR_API_KEY" http://localhost:8080/api/uat/jobs/{jobId}/logs 
         ```
     *   Delete Job:
         ```bash
-        # Replace {jobId} with the actual ID
-        curl -X DELETE http://localhost:8080/api/jobs/{jobId}
+        # Replace {jobId} and YOUR_API_KEY
+        curl -X DELETE -H "X-API-Key: YOUR_API_KEY" http://localhost:8080/api/uat/jobs/{jobId}
         ```
-*   **Jira Integration (API):**
-    *   Test Jira API Connection:
-        ```bash
-        curl -X POST -H "Content-Type: application/json" -d '{
-          "serverUrl": "https://your-jira-instance.atlassian.net",
-          "username": "your-email@example.com",
-          "apiToken": "your-api-token"
-        }' http://localhost:8080/jira/api/test-connection
-        ```
-*   **Jira Integration (Web UI):** The application also provides a web interface for connecting to Jira, searching tickets, viewing details, and importing tickets for test generation. Navigate to `/jira/connect` in your browser to start.
 
 ## Key Technologies
 
