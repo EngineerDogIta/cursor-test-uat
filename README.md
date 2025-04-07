@@ -6,7 +6,9 @@ This project demonstrates using Spring AI to interact with LLMs via Ollama for v
 
 *   **AI Chat:** Basic chat functionality via a REST endpoint (`/chat`).
 *   **UAT Test Generation API:** Asynchronously generates UAT tests from provided content (e.g., Jira ticket descriptions) via secured REST endpoints under `/api/uat/`.
-*   **Persistence:** Uses a SQLite database (`data/test_generation.db`) to store job data.
+*   **Persistence:** Uses Hibernate/JPA for persistence, configured via Spring Profiles:
+    *   **`dev` profile (default):** Uses a SQLite database (`data/test_generation.db`).
+    *   **`prod` profile:** Uses an Oracle database (connection details configured via environment variables).
 
 ## Prerequisites
 
@@ -17,14 +19,22 @@ This project demonstrates using Spring AI to interact with LLMs via Ollama for v
     ```bash
     ollama pull mistral
     ```
-    *(Note: The model can be changed in `application.yml`)*
+    *(Note: The model can be changed in `src/main/resources/application.yml`)*
+*   (For `prod` profile) Access to an Oracle database.
 
 ## Configuration
 
 1.  **Ollama:** Ensure Ollama is running. By default, the application connects to `http://localhost:11434`. This can be overridden using the `OLLAMA_HOST` environment variable or by modifying `spring.ai.ollama.base-url` in `src/main/resources/application.yml`.
 2.  **Model:** The default model is `mistral`. You can configure the model name and its parameters (`temperature`, `top_p`, etc.) under `spring.ai.ollama` in `src/main/resources/application.yml`.
-3.  **Database:** The application uses a SQLite database located at `data/test_generation.db` by default. The path can be changed in `application.yml` under `spring.datasource.url`.
-4.  **Application Settings:** Other settings, like test generation parameters and validation prompts, are also configurable in `application.yml`.
+3.  **Database (via Profiles):**
+    *   Configuration is managed using Spring Profiles. Common settings are in `src/main/resources/application.yml`.
+    *   **Development (`dev` profile):** Uses SQLite. Configuration is in `src/main/resources/application-dev.yml`. The database file is `data/test_generation.db` relative to the application run location.
+    *   **Production (`prod` profile):** Uses Oracle. Configuration is in `src/main/resources/application-prod.yml`. Connection details (URL, username, password) should be provided via environment variables:
+        *   `SPRING_DATASOURCE_URL` (e.g., `jdbc:oracle:thin:@//your-oracle-host:1521/YOUR_SERVICE`)
+        *   `DB_USERNAME`
+        *   `DB_PASSWORD`
+4.  **API Key:** The UAT Generation API requires an API key. Set this securely in `src/main/resources/application.yml` under `api.security.key` or via the `API_SECURITY_KEY` environment variable (recommended for production).
+5.  **Application Settings:** Other settings, like test generation parameters and validation prompts, are also configurable in `src/main/resources/application.yml`.
 
 ## Compiling and Running
 
@@ -34,11 +44,30 @@ This project demonstrates using Spring AI to interact with LLMs via Ollama for v
     # or mvn clean package if you have Maven installed globally
     ```
 
-2.  **Run:**
-    ```bash
-    java -jar target/spring-ai-ollama-demo-*.jar
-    ```
-    *(Replace `*` with the actual version)*
+2.  **Run (Select Profile):**
+    *   **Development (SQLite - Default if not specified):**
+        ```bash
+        # Using Maven plugin (activates 'dev' profile by default implicitly if no other active)
+        ./mvnw spring-boot:run 
+        # Or explicitly:
+        ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+        # Or using the JAR:
+        java -Dspring.profiles.active=dev -jar target/spring-ai-ollama-demo-*.jar
+        ```
+    *   **Production (Oracle):**
+        ```bash
+        # Set environment variables first (example)
+        export SPRING_DATASOURCE_URL=jdbc:oracle:thin:@//your-oracle-host:1521/YOUR_SERVICE
+        export DB_USERNAME=your_user
+        export DB_PASSWORD=your_secret_password
+        export API_SECURITY_KEY=your_prod_api_key 
+
+        # Using Maven plugin:
+        ./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
+        # Or using the JAR:
+        java -Dspring.profiles.active=prod -jar target/spring-ai-ollama-demo-*.jar
+        ```
+    *(Replace `*` with the actual version in JAR commands)*
 
 ## Usage
 
@@ -83,8 +112,10 @@ This project demonstrates using Spring AI to interact with LLMs via Ollama for v
 *   Java 17
 *   Spring Boot 3.x
 *   Spring AI
+*   Spring Profiles
 *   Ollama
 *   Maven
-*   SQLite
+*   SQLite (for `dev` profile)
+*   Oracle (for `prod` profile)
 *   Hibernate/JPA
 *   Docker (optional, for containerization - see `Dockerfile` and `docker-compose.yml`) 

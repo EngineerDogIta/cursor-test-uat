@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:data/test_generation.db
+    driver-class-name: org.sqlite.JDBC
+    username:
+    password:
+    hikari:
+      maximum-pool-size: 1 # Suitable for SQLite
+      minimum-idle: 1
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      # auto-commit: false # SQLite driver might require this, let's keep it commented initially
+      pool-name: SQLiteHikariCP-Dev
+      validation-timeout: 5000
+      leak-detection-threshold: 60000
+  jpa:
+    # Use the specific SQLite dialect
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      # Use 'update' for development to auto-create/update schema
+      ddl-auto: update
+    show-sql: true # Often useful in dev
+    properties:
+      hibernate:
+        # SQLite specific properties
+        # dialect: org.hibernate.community.dialect.SQLiteDialect # Handled by database-platform
+        connection:
+          provider_disables_autocommit: true # Might be needed for SQLite transaction handling
+          foreign_keys: true # Ensure foreign keys are enabled if supported/needed
+        jdbc:
+          batch_size: 30
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+        format_sql: true # Often useful in dev
+
+logging:
+  level:
+    com.example: DEBUG # More detailed logging for dev
+    org.hibernate.SQL: DEBUG # Show SQL in dev
+    org.hibernate.type.descriptor.sql: TRACE # Show SQL parameters in dev 

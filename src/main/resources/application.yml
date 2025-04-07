@@ -33,48 +33,16 @@ spring:
         rope_scaling:
           type: linear
           factor: 2.0
-  datasource:
-    url: jdbc:sqlite:data/test_generation.db
-    driver-class-name: org.sqlite.JDBC
-    username:
-    password:
-    hikari:
-      maximum-pool-size: 1
-      minimum-idle: 1
-      idle-timeout: 300000
-      connection-timeout: 20000
-      max-lifetime: 1200000
-      auto-commit: false
-      pool-name: SQLiteHikariCP
-      validation-timeout: 5000
-      leak-detection-threshold: 60000
-  jpa:
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.community.dialect.SQLiteDialect
-        connection:
-          provider_disables_autocommit: true
-          foreign_keys: true
-        jdbc:
-          batch_size: 30
-          batch_versioned_data: true
-        order_inserts: true
-        order_updates: true
-        generate_statistics: false
-        format_sql: true
+  # Datasource and JPA configurations are now profile-specific
+  # See application-dev.yml (SQLite) and application-prod.yml (Oracle)
 
 # Logging Configuration
 logging:
   level:
     root: INFO
-    com.example: DEBUG
+    com.example: DEBUG # Default level, can be overridden by profiles
     com.zaxxer.hikari: INFO
-    org.hibernate.SQL: WARN
-    org.hibernate.type.descriptor.sql: WARN
+    # Profile-specific logging for Hibernate SQL
 
 # Server Configuration
 server:
