@@ -6,6 +6,8 @@ import com.example.model.JobLog;
 import com.example.repository.JobLogRepository;
 import com.example.model.TestGenerationJob;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
@@ -13,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -49,20 +52,38 @@ public class TestGenerationController {
     /**
      * Starts an asynchronous test generation job.
      * @param ticketDto DTO containing ticket details.
-     * @return ResponseEntity with job information or error.
+     * @return ResponseEntity with the accepted job's ID.
      */
-    @Operation(summary = "Start asynchronous test generation", description = "Accepts ticket information and starts the test generation process in the background.")
+    @Operation(summary = "Start asynchronous test generation", description = "Accepts ticket information, creates a job record, returns the job ID, and starts the generation process in the background.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "202", description = "Test generation request accepted"),
-            @ApiResponse(responseCode = "400", description = "Invalid input data")
+            // Update response description and add content schema for JSON
+            @ApiResponse(responseCode = "202", description = "Test generation request accepted, job ID returned",
+                         content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                          schema = @Schema(implementation = JobIdResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input data",
+                         content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                          schema = @Schema(implementation = ErrorResponseDto.class))), // Assuming you have an ErrorResponseDto
+            @ApiResponse(responseCode = "500", description = "Failed to create job record",
+                         content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                          schema = @Schema(implementation = ErrorResponseDto.class))) // Example for internal errors
     })
     @PostMapping("/start")
-    public ResponseEntity<String> startTestGeneration(@Valid @RequestBody TicketContentDto ticketDto) {
-        // Input validation is now handled by @Valid and GlobalExceptionHandler
+    // Change return type to reflect JSON response with Job ID
+    public ResponseEntity<Map<String, Object>> startTestGeneration(@Valid @RequestBody TicketContentDto ticketDto) {
         logger.info("Received request to start test generation for ticket: {}", ticketDto.getTicketId());
-        testGenerationService.startTestGeneration(ticketDto);
-        // No try-catch needed here for service exceptions, handled globally
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body("Test generation process started for ticket: " + ticketDto.getTicketId());
+
+        // Call the synchronous service method which now returns the job
+        TestGenerationJob createdJob = testGenerationService.startTestGeneration(ticketDto);
+
+        // Extract the ID
+        Long jobId = createdJob.getId();
+        logger.info("Job created with ID: {}. Triggering async processing.", jobId);
+
+        // Create response body
+        Map<String, Object> responseBody = Map.of("jobId", jobId);
+
+        // Return 202 Accepted with the job ID in the body
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responseBody);
     }
 
     /**
@@ -145,4 +166,26 @@ public class TestGenerationController {
         testGenerationService.deleteJob(jobId);
         return ResponseEntity.noContent().build(); // 204 No Content for successful deletion
     }
+}
+
+// Helper DTO (can be placed in dto package or as inner class if simple)
+// Ensure this (or similar) exists if referenced in @Schema
+class JobIdResponseDto {
+    @Schema(description = "The unique identifier for the created job", example = "123")
+    public Long jobId;
+}
+
+// Assume ErrorResponseDto exists for error schemas
+class ErrorResponseDto {
+     @Schema(description = "Timestamp of the error", example = "2023-10-27T10:15:30Z")
+     public String timestamp;
+     @Schema(description = "HTTP status code", example = "400")
+     public int status;
+     @Schema(description = "General error category", example = "Bad Request")
+     public String error;
+     @Schema(description = "Specific error message", example = "Validation failed")
+     public String message;
+     @Schema(description = "Request path", example = "/api/v1/test-generation/start")
+     public String path;
+     // Potentially add validation errors list
 } 

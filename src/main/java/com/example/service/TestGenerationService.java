@@ -43,43 +43,67 @@ public class TestGenerationService {
     }
 
     /**
-     * Starts the asynchronous test generation process for a given ticket.
-     * Creates a job record and initiates the generation.
+     * Creates the initial job record synchronously and triggers the asynchronous processing.
      *
      * @param ticketDto DTO containing the ticket information.
+     * @return The initially saved TestGenerationJob entity with its ID.
+     * @throws JobProcessingException if the initial job record cannot be saved.
      */
-    @Async("taskExecutor")
-    public void startTestGeneration(final TicketContentDto ticketDto) {
-        TestGenerationJob job = null;
-        Long jobId = null; // Store jobId separately
-        try {
-            job = new TestGenerationJob();
-            job.setJiraTicket(ticketDto.getTicketId());
-            job.setDescription(ticketDto.getContent());
-            if (ticketDto.getComponents() != null && !ticketDto.getComponents().isEmpty()) {
-                job.setComponents(String.join(", ", ticketDto.getComponents()));
-            } else {
-                job.setComponents("N/A");
-            }
-            job.setStatus(TestGenerationJob.JobStatus.PENDING);
-            job.setCreatedAt(LocalDateTime.now());
-            job = testGenerationRepository.saveAndFlush(job);
-            jobId = job.getId(); // Get the ID after saving
+    public TestGenerationJob startTestGeneration(final TicketContentDto ticketDto) {
+        TestGenerationJob job = new TestGenerationJob();
+        job.setJiraTicket(ticketDto.getTicketId());
+        job.setDescription(ticketDto.getContent());
+        if (ticketDto.getComponents() != null && !ticketDto.getComponents().isEmpty()) {
+            job.setComponents(String.join(", ", ticketDto.getComponents()));
+        } else {
+            job.setComponents("N/A");
+        }
+        job.setStatus(TestGenerationJob.JobStatus.PENDING);
+        job.setCreatedAt(LocalDateTime.now());
 
-            final Long currentJobId = jobId; // Use final variable if needed
-            jobLogService.addJobLog(job, "INFO", "Job created with ID: " + currentJobId + " for ticket: " + ticketDto.getTicketId());
+        try {
+            // Save the initial job state synchronously
+            job = testGenerationRepository.saveAndFlush(job);
+            final Long jobId = job.getId(); // Get the ID after saving
+
+            // Log job creation immediately
+            jobLogService.addJobLog(job, "INFO", "Job created with ID: " + jobId + " for ticket: " + ticketDto.getTicketId());
             jobLogService.addJobLog(job, "INFO", "Components: " + job.getComponents());
-            processTestGeneration(currentJobId, ticketDto.getContent());
+
+            // Trigger the actual processing asynchronously
+            triggerAsyncProcessing(jobId, ticketDto.getContent(), job); // Pass job for logging context if needed
+
+            // Return the job object with its ID to the controller
+            return job;
 
         } catch (Exception e) {
-            logger.error("Error starting test generation for ticket: {}", ticketDto.getTicketId(), e);
-            if (jobId != null) { // Use the stored jobId
-                // Use JobProcessingException or a more specific startup exception if desired
-                failJob(jobId, "Error during startup: " + e.getMessage(), e);
-            } else {
-                logger.error("Failed to create or save job for ticket: {}", ticketDto.getTicketId());
-                // Consider if a specific exception should be thrown even if job wasn't saved
-            }
+            // If we can't even save the initial job, log and throw
+            logger.error("Critical error: Failed to save initial job state for ticket: {}", ticketDto.getTicketId(), e);
+            // Wrap the exception or throw a specific one
+            throw new JobProcessingException("Failed to create and save job record: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Triggers the asynchronous test generation process.
+     * This method is called after the initial job record is saved.
+     *
+     * @param jobId         The ID of the job to process.
+     * @param ticketContent The content for test generation.
+     * @param job           The job entity (passed for logging context).
+     */
+    @Async("taskExecutor") // This method runs in the background
+    public void triggerAsyncProcessing(final Long jobId, final String ticketContent, final TestGenerationJob job) {
+        try {
+            // Log the start of async processing using the passed job context
+            jobLogService.addJobLog(job, "INFO", "Starting asynchronous processing for job ID: " + jobId);
+            processTestGeneration(jobId, ticketContent);
+        } catch (Exception e) {
+            // Log error if the async task itself fails immediately (e.g., cannot find job)
+            logger.error("Error triggering async processing for job {}: {}", jobId, e.getMessage(), e);
+            // Fail the job if the trigger fails critically (processTestGeneration has its own failJob logic)
+            // Avoid calling failJob here if processTestGeneration already handles it robustly
+            // failJob(jobId, "Error initiating async process: " + e.getMessage(), e);
         }
     }
 
@@ -89,7 +113,6 @@ public class TestGenerationService {
      * @param jobId The ID of the job being processed.
      * @param ticketContent The content/description of the ticket to generate tests for.
      */
-    @Async("taskExecutor")
     protected void processTestGeneration(final Long jobId, final String ticketContent) {
         TestGenerationJob job = null;
         try {

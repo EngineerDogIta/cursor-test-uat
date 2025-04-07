@@ -10,7 +10,7 @@ spring:
       idle-timeout: 300000
       connection-timeout: 20000
       max-lifetime: 1200000
-      # auto-commit: false # SQLite driver might require this, let's keep it commented initially
+      auto-commit: false # SQLite driver might require this, let's keep it commented initially
       pool-name: SQLiteHikariCP-Dev
       validation-timeout: 5000
       leak-detection-threshold: 60000
