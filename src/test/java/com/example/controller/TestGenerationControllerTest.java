@@ -1,6 +1,10 @@
 package com.example.controller;
 
-import com.example.dto.*;
+import com.example.dto.JobLogDto;
+import com.example.dto.JobStatusDto;
+import com.example.dto.JobTestResultDto;
+import com.example.dto.TicketContentDto;
+import com.example.exception.JobNotFoundException;
 import com.example.model.TestGenerationJob;
 import com.example.model.JobLog;
 import com.example.repository.TestGenerationJobRepository;
@@ -8,15 +12,22 @@ import com.example.repository.JobLogRepository;
 import com.example.service.TestGenerationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 class TestGenerationControllerTest {
 
@@ -33,72 +44,73 @@ class TestGenerationControllerTest {
     @Mock
     private JobLogRepository jobLogRepository;
 
+    @InjectMocks
     private TestGenerationController controller;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        controller = new TestGenerationController(testGenerationService, testGenerationRepository, jobLogRepository);
     }
 
     @Test
-    void startTestGeneration_ShouldReturnJobId() {
+    void startTestGeneration_ShouldReturnAccepted() {
         // Arrange
-        TicketContentDto ticketDto = new TicketContentDto.Builder()
-            .setContent("Test ticket content")
-            .setTicketId("TEST-123")
-            .setComponents(new ArrayList<>())
-            .build();
+        TicketContentDto ticketDto = new TicketContentDto();
+        ticketDto.setTicketId("TICKET-001");
+        ticketDto.setContent("Test ticket content");
+        ticketDto.setComponents(new ArrayList<>());
+
+        doNothing().when(testGenerationService).startTestGeneration(any(TicketContentDto.class));
 
         // Act
-        var response = controller.startTestGeneration(ticketDto);
+        ResponseEntity<String> response = controller.startTestGeneration(ticketDto);
 
         // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         assertNotNull(response.getBody());
-        TestGenerationResponseDto responseDto = response.getBody();
-        assertNotNull(responseDto.getJobId());
-        assertEquals("Generazione dei test avviata con successo", responseDto.getMessage());
-        assertNull(responseDto.getError());
-        
+        assertTrue(response.getBody().contains(ticketDto.getTicketId()));
+
         verify(testGenerationService).startTestGeneration(eq(ticketDto));
     }
 
     @Test
-    void getJobStatus_ShouldReturnStatus() {
+    void getJobStatus_ShouldReturnStatusMap() {
         // Arrange
         String jobId = "123";
-        Map<String, Object> expectedStatus = Map.of(
+        Map<String, Object> serviceResponseMap = Map.of(
             "status", "COMPLETED",
             "error", ""
         );
-        
-        when(testGenerationService.getJobStatus(jobId)).thenReturn(expectedStatus);
+        when(testGenerationService.getJobStatus(jobId)).thenReturn(serviceResponseMap);
 
         // Act
-        var response = controller.getJobStatus(jobId);
+        ResponseEntity<Map<String, Object>> response = controller.getJobStatus(jobId);
 
         // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        JobStatusDto statusDto = response.getBody();
-        assertEquals("COMPLETED", statusDto.getStatus());
-        assertEquals("", statusDto.getError());
+        Map<String, Object> responseMap = response.getBody();
+        assertEquals("COMPLETED", responseMap.get("status"));
+        assertEquals("", responseMap.get("error"));
         verify(testGenerationService).getJobStatus(jobId);
     }
 
     @Test
-    void getJobStatus_WithInvalidJobId_ShouldReturnNotFound() {
+    void getJobStatus_WithInvalidJobId_ShouldThrowJobNotFoundException() {
         // Arrange
         String jobId = "invalid-job-id";
-        when(testGenerationService.getJobStatus(jobId)).thenReturn(null);
+        String errorMessage = "Job non trovato";
+        when(testGenerationService.getJobStatus(jobId)).thenThrow(new JobNotFoundException(errorMessage));
 
-        // Act
-        var response = controller.getJobStatus(jobId);
+        JobNotFoundException thrown = assertThrows(
+            JobNotFoundException.class,
+            () -> controller.getJobStatus(jobId),
+            "Expected getJobStatus to throw, but it didn't"
+        );
 
-        // Assert
-        assertEquals(404, response.getStatusCode().value());
-        JobStatusDto statusDto = response.getBody();
-        assertEquals("NOT_FOUND", statusDto.getStatus());
-        assertEquals("Job non trovato", statusDto.getError());
+        assertTrue(thrown.getMessage().contains(errorMessage));
         verify(testGenerationService).getJobStatus(jobId);
     }
 

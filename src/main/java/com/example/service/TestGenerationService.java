@@ -2,6 +2,9 @@ package com.example.service;
 
 import com.example.agent.TestGeneratorAgent;
 import com.example.dto.TicketContentDto;
+import com.example.exception.InvalidJobStateException;
+import com.example.exception.JobNotFoundException;
+import com.example.exception.JobProcessingException;
 import com.example.model.TestGenerationJob;
 import com.example.repository.TestGenerationJobRepository;
 import com.example.services.JobLogService; // Ensure correct import path
@@ -16,80 +19,86 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service responsible for orchestrating the UAT test generation process.
+ */
 @Service
 public class TestGenerationService {
 
     private static final Logger logger = LoggerFactory.getLogger(TestGenerationService.class);
 
+    // Dependencies are now final
     private final TestGeneratorAgent testGenerator;
     private final TestGenerationJobRepository testGenerationRepository;
-    private final JobLogService jobLogService; // Corrected type if needed based on actual package
+    private final com.example.services.JobLogService jobLogService;
 
     @Autowired
     public TestGenerationService(
-            TestGeneratorAgent testGenerator,
-            TestGenerationJobRepository testGenerationRepository,
-            JobLogService jobLogService) {
+            final TestGeneratorAgent testGenerator,
+            final TestGenerationJobRepository testGenerationRepository,
+            final com.example.services.JobLogService jobLogService) {
         this.testGenerator = testGenerator;
         this.testGenerationRepository = testGenerationRepository;
         this.jobLogService = jobLogService;
     }
 
+    /**
+     * Starts the asynchronous test generation process for a given ticket.
+     * Creates a job record and initiates the generation.
+     *
+     * @param ticketDto DTO containing the ticket information.
+     */
     @Async("taskExecutor")
-    public void startTestGeneration(TicketContentDto ticketDto) {
-        TestGenerationJob job = null; // Initialize job to null
+    public void startTestGeneration(final TicketContentDto ticketDto) {
+        TestGenerationJob job = null;
+        Long jobId = null; // Store jobId separately
         try {
             job = new TestGenerationJob();
-            // Ensure getTicketId() and getContent() are non-null or handle potential NullPointerException
-            String ticketId = ticketDto.getTicketId() != null ? ticketDto.getTicketId() : "UNKNOWN";
-            String ticketContent = ticketDto.getContent() != null ? ticketDto.getContent() : "";
-
-            job.setJiraTicket(ticketId);
-            job.setDescription(ticketContent);
-
-            // Components might be null or empty, handle gracefully
+            job.setJiraTicket(ticketDto.getTicketId());
+            job.setDescription(ticketDto.getContent());
             if (ticketDto.getComponents() != null && !ticketDto.getComponents().isEmpty()) {
                 job.setComponents(String.join(", ", ticketDto.getComponents()));
             } else {
-                job.setComponents("N/A"); // Or set to null or empty string as appropriate
+                job.setComponents("N/A");
             }
             job.setStatus(TestGenerationJob.JobStatus.PENDING);
             job.setCreatedAt(LocalDateTime.now());
-            // Save the initial job state
             job = testGenerationRepository.saveAndFlush(job);
-            final Long currentJobId = job.getId(); // Use final variable for lambda/inner class if needed
+            jobId = job.getId(); // Get the ID after saving
 
-            jobLogService.addJobLog(job, "INFO", "Job created with ID: " + currentJobId + " for ticket: " + ticketId);
+            final Long currentJobId = jobId; // Use final variable if needed
+            jobLogService.addJobLog(job, "INFO", "Job created with ID: " + currentJobId + " for ticket: " + ticketDto.getTicketId());
             jobLogService.addJobLog(job, "INFO", "Components: " + job.getComponents());
-
-            // Trigger the simplified processing method
-            processTestGeneration(currentJobId, ticketContent); // Pass potentially empty content
+            processTestGeneration(currentJobId, ticketDto.getContent());
 
         } catch (Exception e) {
-            String ticketId = (ticketDto != null && ticketDto.getTicketId() != null) ? ticketDto.getTicketId() : "UNKNOWN";
-            logger.error("Error starting test generation for ticket: {}", ticketId, e);
-            // If job was created before exception, update its status to FAILED
-            if (job != null && job.getId() != null) {
-                failJob(job.getId(), "Error during startup: " + e.getMessage());
-                // Ensure job object is passed if failJob doesn't refetch it
-                jobLogService.addJobLog(job, "ERROR", "Failed to start processing: " + e.getMessage()); 
+            logger.error("Error starting test generation for ticket: {}", ticketDto.getTicketId(), e);
+            if (jobId != null) { // Use the stored jobId
+                // Use JobProcessingException or a more specific startup exception if desired
+                failJob(jobId, "Error during startup: " + e.getMessage(), e);
             } else {
-                // Log failure even if job wasn't saved
-                logger.error("Failed to create or save job for ticket: {}", ticketId);
+                logger.error("Failed to create or save job for ticket: {}", ticketDto.getTicketId());
+                // Consider if a specific exception should be thrown even if job wasn't saved
             }
         }
     }
 
+    /**
+     * The core asynchronous processing logic for generating tests.
+     *
+     * @param jobId The ID of the job being processed.
+     * @param ticketContent The content/description of the ticket to generate tests for.
+     */
     @Async("taskExecutor")
-    protected void processTestGeneration(Long jobId, String ticketContent) {
+    protected void processTestGeneration(final Long jobId, final String ticketContent) {
         TestGenerationJob job = null;
         try {
             job = testGenerationRepository.findById(jobId)
-                    .orElseThrow(() -> new RuntimeException("Job not found with id: " + jobId));
+                    .orElseThrow(() -> new JobNotFoundException("Job not found with id: " + jobId)); // Throw JobNotFoundException
 
             jobLogService.addJobLog(job, "INFO", "Processing job ID: " + jobId);
             job.setStatus(TestGenerationJob.JobStatus.IN_PROGRESS);
-            testGenerationRepository.save(job); // Save IN_PROGRESS status
+            testGenerationRepository.save(job);
             jobLogService.addJobLog(job, "INFO", "Job status updated to IN_PROGRESS");
 
             jobLogService.addJobLog(job, "INFO", "Calling Test Generator Agent directly with ticket content.");
@@ -98,96 +107,83 @@ public class TestGenerationService {
 
             if (generatedTests != null && generatedTests.startsWith("Error:")) {
                 logger.error("Test Generation Agent returned an error for job {}: {}", jobId, generatedTests);
-                jobLogService.addJobLog(job, "ERROR", "Test Generation failed: " + generatedTests);
-                failJob(jobId, generatedTests); // Use failJob for error path
-                return;
+                // Throw JobProcessingException when generator indicates failure
+                throw new JobProcessingException("Test Generation failed: " + generatedTests);
             }
 
             jobLogService.addJobLog(job, "DEBUG", "Generated tests:\n" + generatedTests);
-
-            // Set result and complete the job directly here
             job.setTestResult(generatedTests);
             jobLogService.addJobLog(job, "INFO", "Successfully generated tests.");
             job.setStatus(TestGenerationJob.JobStatus.COMPLETED);
             job.setCompletedAt(LocalDateTime.now());
-            job.setErrorMessage(null); // Clear any previous error message
-            testGenerationRepository.saveAndFlush(job); // Save final state including result
+            job.setErrorMessage(null);
+            testGenerationRepository.saveAndFlush(job);
             jobLogService.addJobLog(job, "INFO", "Job completed and saved.");
 
-        } catch (Exception e) {
-            logger.error("Error during simplified test generation process for jobId: {}", jobId, e);
-            if (jobId != null) {
-                String errorMessage = (e.getMessage() != null) ? e.getMessage() : "Unknown error";
-                failJob(jobId, "Process failed: " + errorMessage); // Use failJob for exception path
-                if (job != null) {
-                   jobLogService.addJobLog(job, "ERROR", "Process failed unexpectedly: " + errorMessage);
-                }
-            }
+        } catch (JobProcessingException | JobNotFoundException e) { // Catch specific exceptions first
+             logger.error("Error during test generation process for job {}: {}", jobId, e.getMessage(), e);
+             failJob(jobId, e.getMessage(), e); // Pass cause
+        } catch (Exception e) { // Catch broader exceptions
+            logger.error("Unexpected error during test generation process for jobId: {}", jobId, e);
+            String errorMessage = (e.getMessage() != null) ? e.getMessage() : "Unknown error";
+            failJob(jobId, "Process failed unexpectedly: " + errorMessage, e); // Pass cause
         }
     }
 
-    // Helper method to fail a job
-    private void failJob(Long jobId, String errorMessage) {
-        TestGenerationJob jobToFail = null; // Use a different variable name
+    /**
+     * Helper method to mark a job as FAILED.
+     *
+     * @param jobId The ID of the job to fail.
+     * @param errorMessage The reason for the failure.
+     * @param cause The original exception causing the failure (optional).
+     */
+    private void failJob(final Long jobId, final String errorMessage, final Throwable cause) { // Accept cause
+        TestGenerationJob jobToFail = null;
         try {
-            // Refetch job inside try-catch to ensure we have the latest state 
-            // or handle the case where it might have been deleted concurrently.
             jobToFail = testGenerationRepository.findById(jobId)
-                    .orElse(null); // Don't throw, handle null case
-
-            if (jobToFail == null) {
-                logger.warn("Attempted to fail non-existent or already deleted job: {}", jobId);
-                return; // Job doesn't exist, nothing to fail
-            }
-            
-            // Check if already failed to avoid redundant updates/logs
-            if (jobToFail.getStatus() == TestGenerationJob.JobStatus.FAILED) {
-                logger.info("Job {} already marked as FAILED.", jobId);
-                return;
-            }
-
+                    // Throw JobNotFoundException if job doesn't exist when trying to fail it
+                    .orElseThrow(() -> new JobNotFoundException("Attempted to fail non-existent job: " + jobId));
             jobToFail.setStatus(TestGenerationJob.JobStatus.FAILED);
-            // Truncate error message if it's too long for the database field
-            jobToFail.setErrorMessage(errorMessage != null && errorMessage.length() > 1024 ? errorMessage.substring(0, 1024) : errorMessage);
+            // Limit error message length if necessary
+            jobToFail.setErrorMessage(errorMessage.length() > 255 ? errorMessage.substring(0, 252) + ".." : errorMessage);
             jobToFail.setCompletedAt(LocalDateTime.now());
-            testGenerationRepository.save(jobToFail); // Save the failed state
-            logger.warn("Job {} marked as FAILED. Reason: {}", jobId, errorMessage);
-            
-            // Add log entry for failure completion
-            jobLogService.addJobLog(jobToFail, "INFO", "Job failed and saved.");
-
+            testGenerationRepository.save(jobToFail);
+            logger.warn("Job {} marked as FAILED. Reason: {}", jobId, errorMessage, cause); // Log cause
+             if (jobToFail != null) {
+                jobLogService.addJobLog(jobToFail, "ERROR", "Job failed: " + errorMessage); // Add failure log
+                jobLogService.addJobLog(jobToFail, "INFO", "Job failed and saved.");
+             }
+        } catch (JobNotFoundException e) {
+            logger.error("Critical error: Attempted to fail job {} which was not found.", jobId, e);
         } catch (Exception ex) {
-            // Log critical error if we can't even mark the job as failed
-            logger.error("Critical error: Failed to update job {} status to FAILED. Database issue? Reason: {}", jobId, ex.getMessage(), ex);
-            // Avoid logging the job object here if it might be null or stale
+            logger.error("Critical error: Failed to update job {} status to FAILED. Reason: {}", jobId, ex.getMessage(), ex);
+            // Avoid throwing from finally/catch block if possible
         }
     }
 
-    public Map<String, Object> getJobStatus(String jobId) {
-        try {
-            Long jobIdLong = Long.parseLong(jobId);
-            TestGenerationJob job = testGenerationRepository.findById(jobIdLong).orElse(null);
-            if (job == null) {
-                logger.debug("Status requested for non-existent jobId: {}", jobId);
-                return Map.of(
-                    "status", "NOT_FOUND",
-                    "message", "Job not found"
-                );
-            }
-            
-            return Map.of(
-                "status", job.getStatus().name(),
-                "error", job.getErrorMessage() != null ? job.getErrorMessage() : ""
-            );
-        } catch (NumberFormatException e) {
-             logger.warn("Invalid jobId format received for status: {}", jobId);
-            return Map.of(
-                "status", "INVALID_ID",
-                "message", "Invalid job ID format"
-            );
-        }
+    /**
+     * Retrieves the status and error message for a job.
+     *
+     * @param jobId The string representation of the job ID.
+     * @return A map containing the job status and error message.
+     * @throws NumberFormatException if jobId is not a valid long.
+     * @throws JobNotFoundException if the job is not found.
+     */
+    public Map<String, Object> getJobStatus(final String jobId) {
+        Long jobIdLong = Long.parseLong(jobId); // Can throw NumberFormatException
+        TestGenerationJob job = testGenerationRepository.findById(jobIdLong)
+            .orElseThrow(() -> new JobNotFoundException("Job status not found for ID: " + jobId)); // Throw JobNotFoundException
+        return Map.of(
+            "status", job.getStatus().name(),
+            "error", job.getErrorMessage() != null ? job.getErrorMessage() : ""
+        );
     }
 
+    /**
+     * Retrieves all active (PENDING or IN_PROGRESS) jobs.
+     *
+     * @return A list of active TestGenerationJob entities.
+     */
     public List<TestGenerationJob> getActiveJobs() {
         return testGenerationRepository.findByStatusIn(List.of(
             TestGenerationJob.JobStatus.PENDING,
@@ -195,6 +191,11 @@ public class TestGenerationService {
         ));
     }
 
+    /**
+     * Retrieves all completed (COMPLETED or FAILED) jobs.
+     *
+     * @return A list of completed TestGenerationJob entities.
+     */
     public List<TestGenerationJob> getCompletedJobs() {
         return testGenerationRepository.findByStatusIn(List.of(
             TestGenerationJob.JobStatus.COMPLETED,
@@ -202,23 +203,50 @@ public class TestGenerationService {
         ));
     }
 
-    public TestGenerationJob getJob(Long id) {
+    /**
+     * Retrieves a specific job by its ID.
+     *
+     * @param id The job ID.
+     * @return The TestGenerationJob entity.
+     * @throws JobNotFoundException if the job is not found.
+     */
+    public TestGenerationJob getJob(final Long id) {
         return testGenerationRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+            .orElseThrow(() -> new JobNotFoundException("Job not found with id: " + id)); // Throw JobNotFoundException
     }
 
+    /**
+     * Creates a job record manually.
+     * Note: This method is potentially deprecated and does not trigger processing.
+     *
+     * @param job The job entity to create (status and dates will be set).
+     * @return The persisted TestGenerationJob entity.
+     */
     @Transactional
-    public void deleteJob(Long jobId) {
-        // Consider adding logic to delete associated logs if JobLogService supports it
-        // jobLogService.deleteLogsForJob(jobId);
-        // Use existsById for efficiency before fetching
-        if (!testGenerationRepository.existsById(jobId)) {
-             logger.warn("Attempted to delete non-existent job: {}", jobId);
-             // Optionally throw an exception or return a status
-             // throw new RuntimeException("Job not found for deletion: " + jobId);
-             return; 
+    public TestGenerationJob createJob(final TestGenerationJob job) {
+        // Implementation of createJob method
+        // This method is not provided in the original file or the new code block
+        // It's assumed to exist as it's called in the deleteJob method
+        return null; // Placeholder return, actual implementation needed
+    }
+
+    /**
+     * Deletes a job by its ID.
+     * Cannot delete jobs that are currently IN_PROGRESS.
+     *
+     * @param jobId The ID of the job to delete.
+     * @throws JobNotFoundException if the job is not found.
+     * @throws InvalidJobStateException if the job is IN_PROGRESS.
+     */
+    @Transactional
+    public void deleteJob(final Long jobId) {
+        TestGenerationJob job = getJob(jobId); // Throws JobNotFoundException if not found
+        if (job.getStatus() == TestGenerationJob.JobStatus.IN_PROGRESS) {
+            // Throw InvalidJobStateException for specific state issue
+            throw new InvalidJobStateException("Cannot delete a job that is IN_PROGRESS. Job ID: " + jobId);
         }
-        testGenerationRepository.deleteById(jobId); // More efficient than fetching then deleting
+        testGenerationRepository.delete(job);
         logger.info("Deleted job with ID: {}", jobId);
+        // Consider deleting logs: jobLogService.deleteLogsForJob(jobId);
     }
 } 

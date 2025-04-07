@@ -8,18 +8,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.time.LocalDateTime;
 
+/**
+ * Service responsible for managing job log entries.
+ */
 @Service
 public class JobLogService {
     private static final Logger logger = LoggerFactory.getLogger(JobLogService.class);
     private final TestGenerationJobRepository testGenerationJobRepository;
     private final JobLogRepository jobLogRepository;
 
-    public JobLogService(TestGenerationJobRepository testGenerationJobRepository, JobLogRepository jobLogRepository) {
+    @Autowired
+    public JobLogService(
+        final TestGenerationJobRepository testGenerationJobRepository, 
+        final JobLogRepository jobLogRepository) {
         this.testGenerationJobRepository = testGenerationJobRepository;
         this.jobLogRepository = jobLogRepository;
     }
 
+    /**
+     * Adds a new log entry for a given job.
+     * If the job is null, logs only to the system logger.
+     *
+     * @param job The job to associate the log with.
+     * @param level The log level (e.g., INFO, ERROR).
+     * @param message The log message.
+     */
     @Transactional
     public void addJobLog(TestGenerationJob job, String level, String message) {
         if (job == null) {
