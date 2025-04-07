@@ -18,8 +18,7 @@ public class TestGeneratorAgent {
     Generate a numbered list of UAT test cases based ONLY on the information present in the description.
     Each test case MUST strictly follow this format:
 
-    ID: [Test ID, e.g., UAT-001]
-    Title: [Concise test title reflecting a requirement in the description]
+    [Test ID, e.g., UAT-001] [Very short title reflecting a requirement in the description]
     Steps:
     1. [Simple step 1, from an end-user perspective, e.g., "Navigate to the login page."]
     2. [Simple step 2, from an end-user perspective, e.g., "Enter valid username and password."]
