@@ -1,11 +1,10 @@
 package com.example.controller;
 
 import com.example.dto.*;
-import com.example.model.TestGenerationJob;
-import com.example.model.JobLog;
-import com.example.repository.TestGenerationJobRepository;
-import com.example.repository.JobLogRepository;
 import com.example.service.TestGenerationService;
+import com.example.model.JobLog;
+import com.example.repository.JobLogRepository;
+import com.example.model.TestGenerationJob;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -22,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+// Import JobNotFoundException
+import com.example.exception.JobNotFoundException;
+
 /**
  * REST controller exposing API endpoints for UAT test generation jobs.
  */
@@ -33,17 +35,14 @@ public class TestGenerationController {
     private static final Logger logger = LoggerFactory.getLogger(TestGenerationController.class);
 
     private final TestGenerationService testGenerationService;
-    private final TestGenerationJobRepository testGenerationJobRepository;
     private final JobLogRepository jobLogRepository;
 
     // Constructor injection
     @Autowired
     public TestGenerationController(
             final TestGenerationService testGenerationService,
-            final TestGenerationJobRepository testGenerationJobRepository,
             final JobLogRepository jobLogRepository) {
         this.testGenerationService = testGenerationService;
-        this.testGenerationJobRepository = testGenerationJobRepository;
         this.jobLogRepository = jobLogRepository;
     }
 
@@ -94,12 +93,14 @@ public class TestGenerationController {
     public ResponseEntity<List<JobLogDto>> getJobLogs(@PathVariable String jobId) {
         try {
             Long jobIdLong = Long.parseLong(jobId);
+            logger.debug("Received request for logs of job ID: {}", jobIdLong);
             List<JobLog> logs = jobLogRepository.findByJobIdOrderByTimestampDesc(jobIdLong);
             List<JobLogDto> logDtos = logs.stream()
                     .map(log -> new JobLogDto(log.getTimestamp(), log.getLevel(), log.getMessage()))
                     .collect(Collectors.toList());
             return ResponseEntity.ok(logDtos);
         } catch (NumberFormatException e) {
+            logger.warn("Invalid job ID format for logs request: {}", jobId);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -113,16 +114,16 @@ public class TestGenerationController {
     public ResponseEntity<JobTestResultDto> getJobTestResult(@PathVariable String jobId) {
         try {
             Long jobIdLong = Long.parseLong(jobId);
-            TestGenerationJob job = testGenerationJobRepository.findById(jobIdLong)
-                    .orElse(null);
-            
-            if (job == null) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            return ResponseEntity.ok(new JobTestResultDto(job.getTestResult()));
+            logger.debug("Received request for test result of job ID: {}", jobIdLong);
+            TestGenerationJob job = testGenerationService.getJob(jobIdLong);
+            JobTestResultDto resultDto = new JobTestResultDto(job.getTestResult());
+            return ResponseEntity.ok(resultDto);
         } catch (NumberFormatException e) {
+            logger.warn("Invalid job ID format for test result request: {}", jobId);
             return ResponseEntity.badRequest().build();
+        } catch (JobNotFoundException e) { // Catch JobNotFoundException
+            logger.warn("Test result requested for non-existent job ID: {}", jobId);
+            return ResponseEntity.notFound().build(); // Return 404 Not Found
         }
     }
 

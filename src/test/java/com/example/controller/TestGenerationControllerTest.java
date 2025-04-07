@@ -161,7 +161,7 @@ class TestGenerationControllerTest {
         TestGenerationJob job = new TestGenerationJob();
         job.setTestResult("Test result content");
         
-        when(testGenerationRepository.findById(jobIdLong)).thenReturn(java.util.Optional.of(job));
+        when(testGenerationService.getJob(jobIdLong)).thenReturn(job);
 
         // Act
         var response = controller.getJobTestResult(jobId);
@@ -170,7 +170,7 @@ class TestGenerationControllerTest {
         assertNotNull(response.getBody());
         JobTestResultDto resultDto = response.getBody();
         assertEquals("Test result content", resultDto.getTestResult());
-        verify(testGenerationRepository).findById(jobIdLong);
+        verify(testGenerationService).getJob(jobIdLong);
     }
 
     @Test
@@ -183,7 +183,7 @@ class TestGenerationControllerTest {
 
         // Assert
         assertEquals(400, response.getStatusCode().value());
-        verify(testGenerationRepository, never()).findById(any());
+        verify(testGenerationService, never()).getJob(any());
     }
 
     @Test
@@ -191,14 +191,14 @@ class TestGenerationControllerTest {
         // Arrange
         String jobId = "123";
         Long jobIdLong = 123L;
-        when(testGenerationRepository.findById(jobIdLong)).thenReturn(java.util.Optional.empty());
+        when(testGenerationService.getJob(jobIdLong)).thenThrow(new JobNotFoundException("Job not found"));
 
         // Act
         var response = controller.getJobTestResult(jobId);
 
         // Assert
         assertEquals(404, response.getStatusCode().value());
-        verify(testGenerationRepository).findById(jobIdLong);
+        verify(testGenerationService).getJob(jobIdLong);
     }
 
     private JobLog createJobLog(String level, String message) {
